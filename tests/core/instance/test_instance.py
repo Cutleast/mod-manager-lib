@@ -3,9 +3,8 @@ Copyright (c) Cutleast
 """
 
 from base_test import BaseTest
-
-from core.instance.instance import Instance
-from core.instance.mod import Mod
+from mod_manager_lib.core.instance.instance import Instance
+from mod_manager_lib.core.instance.mod import Mod
 
 
 class TestInstance(BaseTest):

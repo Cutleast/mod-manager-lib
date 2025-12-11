@@ -5,15 +5,16 @@ Copyright (c) Cutleast
 from pathlib import Path
 
 import pytest
+from base_test import BaseTest
 from cutleast_core_lib.core.utilities.env_resolver import resolve
 from cutleast_core_lib.test.utils import Utils
 from cutleast_core_lib.ui.widgets.browse_edit import BrowseLineEdit
+from mod_manager_lib.ui.instance_creator.modorganizer_creator_widget import (
+    ModOrganizerCreatorWidget,
+)
 from pyfakefs.fake_filesystem import FakeFilesystem
 from PySide6.QtWidgets import QCheckBox, QLineEdit, QRadioButton
 from pytestqt.qtbot import QtBot
-
-from tests.base_test import BaseTest
-from ui.instance_creator.modorganizer_creator_widget import ModOrganizerCreatorWidget
 
 
 class TestModOrganizerCreatorWidget(BaseTest):

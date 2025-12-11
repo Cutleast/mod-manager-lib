@@ -3,9 +3,8 @@ Copyright (c) Cutleast
 """
 
 from base_test import BaseTest
-
-from core.game import Game
-from core.game_service import GameService
+from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.game_service import GameService
 
 
 class TestGameService(BaseTest):

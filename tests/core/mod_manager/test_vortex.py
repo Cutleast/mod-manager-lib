@@ -9,18 +9,17 @@ from typing import Any
 import pytest
 from base_test import BaseTest
 from cutleast_core_lib.test.utils import Utils
+from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.game_service import GameService
+from mod_manager_lib.core.instance.instance import Instance
+from mod_manager_lib.core.instance.mod import Mod
+from mod_manager_lib.core.instance.tool import Tool
+from mod_manager_lib.core.mod_manager.vortex.exceptions import VortexNotFullySetupError
+from mod_manager_lib.core.mod_manager.vortex.leveldb import LevelDB
+from mod_manager_lib.core.mod_manager.vortex.profile_info import ProfileInfo
+from mod_manager_lib.core.mod_manager.vortex.vortex import Vortex
 from pyfakefs.fake_filesystem import FakeFilesystem
 from setup.mock_plyvel import MockPlyvelDB
-
-from core.game import Game
-from core.game_service import GameService
-from core.instance.instance import Instance
-from core.instance.mod import Mod
-from core.instance.tool import Tool
-from core.mod_manager.vortex.exceptions import VortexNotFullySetupError
-from core.mod_manager.vortex.leveldb import LevelDB
-from core.mod_manager.vortex.profile_info import ProfileInfo
-from core.mod_manager.vortex.vortex import Vortex
 
 
 def get_staging_folder_stub(game: Game) -> Path:

@@ -3,16 +3,17 @@ Copyright (c) Cutleast
 """
 
 import pytest
+from base_test import BaseTest
 from cutleast_core_lib.test.utils import Utils
 from cutleast_core_lib.ui.widgets.browse_edit import BrowseLineEdit
+from mod_manager_lib.core.game_service import GameService
+from mod_manager_lib.core.mod_manager.modorganizer.modorganizer import ModOrganizer
+from mod_manager_lib.ui.instance_selector.modorganizer_selector_widget import (
+    ModOrganizerSelectorWidget,
+)
 from pyfakefs.fake_filesystem import FakeFilesystem
 from PySide6.QtWidgets import QComboBox
 from pytestqt.qtbot import QtBot
-
-from core.game_service import GameService
-from core.mod_manager.modorganizer.modorganizer import ModOrganizer
-from tests.base_test import BaseTest
-from ui.instance_selector.modorganizer_selector_widget import ModOrganizerSelectorWidget
 
 
 class TestModOrganizerSelectorWidget(BaseTest):
