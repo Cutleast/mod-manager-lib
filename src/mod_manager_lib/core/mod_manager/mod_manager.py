@@ -5,7 +5,7 @@ Copyright (c) Cutleast
 import logging
 import os
 import shutil
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 from pathlib import Path
 from typing import Optional, override
 
@@ -25,7 +25,7 @@ from ..instance.tool import Tool
 from .instance_info import InstanceInfo
 
 
-class ModManager[I: InstanceInfo](QObject, metaclass=ABCMeta):
+class ModManager[I: InstanceInfo](QObject):
     """
     Abstract class for mod managers.
     """
