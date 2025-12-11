@@ -5,11 +5,6 @@ It provides core classes and services to represent and handle game specification
 
 ## Installation
 
-### As Static Dependency
-
-Run this from the root of your project to add from the master branch to your dependencies:
-`uv add git+https://github.com/Cutleast/mod-manager-lib`
-
 ### As Git Submodule
 
 1. Add this repository as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules) to `<project root>/mod-manager-lib` with this command:

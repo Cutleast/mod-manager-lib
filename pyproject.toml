@@ -24,7 +24,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-cutleast-core-lib = { git = "https://github.com/Cutleast/cutleast-core-lib" }
+cutleast-core-lib = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
