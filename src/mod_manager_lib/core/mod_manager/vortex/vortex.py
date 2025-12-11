@@ -19,14 +19,14 @@ from cutleast_core_lib.core.multithreading.progress import (
 )
 from cutleast_core_lib.core.utilities.env_resolver import resolve
 
-from core.exceptions import GameNotFoundError
-from core.game import Game
-from core.game_service import GameService
-from core.instance.instance import Instance
-from core.instance.metadata import Metadata
-from core.instance.mod import Mod
-from core.instance.tool import Tool
-from core.utilities.filesystem import clean_fs_string
+from mod_manager_lib.core.exceptions import GameNotFoundError
+from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.game_service import GameService
+from mod_manager_lib.core.instance.instance import Instance
+from mod_manager_lib.core.instance.metadata import Metadata
+from mod_manager_lib.core.instance.mod import Mod
+from mod_manager_lib.core.instance.tool import Tool
+from mod_manager_lib.core.utilities.filesystem import clean_fs_string
 
 from ..exceptions import InstanceNotFoundError
 from ..mod_manager import ModManager
@@ -696,7 +696,7 @@ class Vortex(ModManager[ProfileInfo]):
         self.__level_db.set_section(profile_db_prefix, profile_mod_data)
 
         if not instance.is_mod_installed(mod):
-            new_mod: Mod = Mod.copy(mod)
+            new_mod: Mod = Mod.create_copy(mod)
             new_mod.path = mod_folder
             instance.mods.append(new_mod)
 

@@ -9,8 +9,8 @@ from PySide6.QtCore import QEvent, QObject, Signal
 from PySide6.QtGui import QWheelEvent
 from PySide6.QtWidgets import QComboBox, QSpinBox, QWidget
 
-from core.game import Game
-from core.mod_manager.instance_info import InstanceInfo
+from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
 
 
 class BaseSelectorWidget[I: InstanceInfo](QWidget):

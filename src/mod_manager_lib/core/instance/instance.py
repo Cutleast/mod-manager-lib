@@ -2,20 +2,19 @@
 Copyright (c) Cutleast
 """
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from core.utilities.filter import get_first_match
+from cutleast_core_lib.core.utilities.filter import get_first_match
+from pydantic import BaseModel
 
 from .mod import Mod
 from .tool import Tool
 
 
-@dataclass
-class Instance:
+class Instance(BaseModel):
     """
-    Class for representing an entire modinstance.
+    Model representing an entire modinstance.
     """
 
     display_name: str

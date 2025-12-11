@@ -4,7 +4,6 @@ Copyright (c) Cutleast
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 from typing import Optional, override
@@ -12,14 +11,14 @@ from typing import Optional, override
 from cutleast_core_lib.core.cache.function_cache import FunctionCache
 from cutleast_core_lib.core.filesystem.file import File
 from cutleast_core_lib.core.filesystem.scanner import DirectoryScanner
+from pydantic import BaseModel, Field
 
 from .metadata import Metadata
 
 
-@dataclass
-class Mod:
+class Mod(BaseModel):
     """
-    Class for representing a mod.
+    Model representing a mod.
     """
 
     display_name: str
@@ -79,13 +78,13 @@ class Mod:
     Type of the mod.
     """
 
-    mod_conflicts: list[Mod] = field(default_factory=list)
+    mod_conflicts: list[Mod] = Field(default_factory=list)
     """
     List of mods that overwrite this mod.
     These conflicts are used for creating a loadorder.
     """
 
-    file_conflicts: dict[str, Mod] = field(default_factory=dict)
+    file_conflicts: dict[str, Mod] = Field(default_factory=dict)
     """
     Mapping of file names that are explicitly overwritten by other mods.
     Each file is handled separately and has no impact on the loadorder.
@@ -107,7 +106,7 @@ class Mod:
         return DirectoryScanner.scan_folder(path)
 
     @staticmethod
-    def copy(mod: Mod) -> Mod:
+    def create_copy(mod: Mod) -> Mod:
         """
         Creates a copy of the specified mod.
         Resets the cache of the files and size properties.

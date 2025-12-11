@@ -5,7 +5,7 @@ Copyright (c) Cutleast
 import logging
 import os
 import shutil
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from typing import Optional, override
 
@@ -18,15 +18,14 @@ from cutleast_core_lib.core.utilities.logger import Logger
 from cutleast_core_lib.core.utilities.scale import scale_value
 from PySide6.QtCore import QObject
 
-from core.game import Game
-from core.instance.instance import Instance
-from core.instance.mod import Mod
-from core.instance.tool import Tool
-
+from ..game import Game
+from ..instance.instance import Instance
+from ..instance.mod import Mod
+from ..instance.tool import Tool
 from .instance_info import InstanceInfo
 
 
-class ModManager[I: InstanceInfo](QObject):
+class ModManager[I: InstanceInfo](QObject, metaclass=ABCMeta):
     """
     Abstract class for mod managers.
     """

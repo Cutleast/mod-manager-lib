@@ -8,8 +8,8 @@ from abc import abstractmethod
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget
 
-from core.game import Game
-from core.mod_manager.instance_info import InstanceInfo
+from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
 
 
 class BaseCreatorWidget[I: InstanceInfo](QWidget):

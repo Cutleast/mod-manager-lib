@@ -2,14 +2,12 @@
 Copyright (c) Cutleast
 """
 
-from dataclasses import dataclass
 from pathlib import Path
 
 from ..instance_info import InstanceInfo
 
 
-@dataclass(frozen=True)
-class MO2InstanceInfo(InstanceInfo):
+class MO2InstanceInfo(InstanceInfo, frozen=True):
     """
     Class for identifying an MO2 instance and profile.
     """

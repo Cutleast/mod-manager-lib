@@ -19,19 +19,19 @@ from cutleast_core_lib.core.utilities.env_resolver import resolve
 from cutleast_core_lib.core.utilities.reverse_dict import reverse_dict
 from cutleast_core_lib.core.utilities.unique import unique
 
-from core.exceptions import GameNotFoundError
-from core.game import Game
-from core.game_service import GameService
-from core.instance.instance import Instance
-from core.instance.metadata import Metadata
-from core.instance.mod import Mod
-from core.instance.tool import Tool
-from core.mod_manager.exceptions import InstanceNotFoundError
-from core.mod_manager.modorganizer.exceptions import (
+from mod_manager_lib.core.exceptions import GameNotFoundError
+from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.game_service import GameService
+from mod_manager_lib.core.instance.instance import Instance
+from mod_manager_lib.core.instance.metadata import Metadata
+from mod_manager_lib.core.instance.mod import Mod
+from mod_manager_lib.core.instance.tool import Tool
+from mod_manager_lib.core.mod_manager.exceptions import InstanceNotFoundError
+from mod_manager_lib.core.mod_manager.modorganizer.exceptions import (
     CannotInstallGlobalMo2Error,
     InvalidGlobalInstancePathError,
 )
-from core.utilities.filesystem import clean_fs_string
+from mod_manager_lib.core.utilities.filesystem import clean_fs_string
 
 from ..mod_manager import ModManager
 from .ini_file import INIFile
@@ -804,7 +804,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             existing_mod.file_conflicts.update(mod.file_conflicts)
 
         elif regular_deployment:
-            new_mod: Mod = Mod.copy(mod)
+            new_mod: Mod = Mod.create_copy(mod)
             new_mod.path = mod_folder
             instance.mods.append(new_mod)
 

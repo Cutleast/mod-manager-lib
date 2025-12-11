@@ -8,9 +8,9 @@ from typing import Optional, override
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QComboBox, QGridLayout, QLabel
 
-from core.game import Game
-from core.mod_manager.vortex.profile_info import ProfileInfo
-from core.mod_manager.vortex.vortex import Vortex
+from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.mod_manager.vortex.profile_info import ProfileInfo
+from mod_manager_lib.core.mod_manager.vortex.vortex import Vortex
 
 from .base_selector_widget import BaseSelectorWidget
 

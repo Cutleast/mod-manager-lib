@@ -16,10 +16,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.game import Game
-from core.mod_manager import MOD_MANAGERS
-from core.mod_manager.instance_info import InstanceInfo
-from core.mod_manager.mod_manager import ModManager
+from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.mod_manager import MOD_MANAGERS
+from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
+from mod_manager_lib.core.mod_manager.mod_manager import ModManager
 
 from . import INSTANCE_WIDGETS
 from .base_creator_widget import BaseCreatorWidget

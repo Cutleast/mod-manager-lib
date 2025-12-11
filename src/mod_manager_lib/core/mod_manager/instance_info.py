@@ -2,16 +2,16 @@
 Copyright (c) Cutleast
 """
 
-from abc import ABC
-from dataclasses import dataclass
+from abc import ABCMeta
 
-from core.game import Game
+from pydantic import BaseModel
+
+from ..game import Game
 
 
-@dataclass(frozen=True)
-class InstanceInfo(ABC):
+class InstanceInfo(BaseModel, metaclass=ABCMeta, frozen=True):
     """
-    Base class for identifying an instance within a mod manager.
+    Base model for identifying an instance within a mod manager.
     """
 
     display_name: str

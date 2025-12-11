@@ -2,14 +2,14 @@
 Copyright (c) Cutleast
 """
 
-from dataclasses import dataclass
 from typing import Optional, override
 
+from pydantic import BaseModel
 
-@dataclass(frozen=True)
-class Metadata:
+
+class Metadata(BaseModel, frozen=True):
     """
-    Class for holding mod metadata like mod id, file id, etc.
+    Model holding mod metadata like mod id, file id, etc.
     """
 
     mod_id: Optional[int]

@@ -2,13 +2,10 @@
 Copyright (c) Cutleast
 """
 
-from dataclasses import dataclass
-
 from ..instance_info import InstanceInfo
 
 
-@dataclass(frozen=True)
-class ProfileInfo(InstanceInfo):
+class ProfileInfo(InstanceInfo, frozen=True):
     """
     Class for identifying a Vortex profile.
     """

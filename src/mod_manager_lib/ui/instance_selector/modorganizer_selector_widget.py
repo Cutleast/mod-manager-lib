@@ -10,9 +10,11 @@ from cutleast_core_lib.ui.widgets.browse_edit import BrowseLineEdit
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QComboBox, QFileDialog, QGridLayout, QLabel
 
-from core.game import Game
-from core.mod_manager.modorganizer.mo2_instance_info import MO2InstanceInfo
-from core.mod_manager.modorganizer.modorganizer import ModOrganizer
+from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.mod_manager.modorganizer.mo2_instance_info import (
+    MO2InstanceInfo,
+)
+from mod_manager_lib.core.mod_manager.modorganizer.modorganizer import ModOrganizer
 
 from .base_selector_widget import BaseSelectorWidget
 

@@ -5,15 +5,14 @@ Copyright (c) Cutleast
 from pathlib import Path
 from typing import Optional, override
 
-from pydantic.dataclasses import dataclass
+from pydantic import BaseModel
 
 from .mod import Mod
 
 
-@dataclass
-class Tool:
+class Tool(BaseModel):
     """
-    Class for representing modding tools.
+    Model representing modding tools.
     """
 
     display_name: str
