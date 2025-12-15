@@ -29,7 +29,7 @@ from mod_manager_lib.core.instance.tool import Tool
 from mod_manager_lib.core.utilities.filesystem import clean_fs_string
 
 from ..exceptions import InstanceNotFoundError
-from ..mod_manager import ModManager
+from ..mod_manager_api import ModManagerApi
 from .exceptions import (
     OverwriteModNotSupportedError,
     VortexIsRunningError,
@@ -39,7 +39,7 @@ from .leveldb import LevelDB
 from .profile_info import ProfileInfo
 
 
-class Vortex(ModManager[ProfileInfo]):
+class Vortex(ModManagerApi[ProfileInfo]):
     """
     Mod manager class for Vortex.
     """

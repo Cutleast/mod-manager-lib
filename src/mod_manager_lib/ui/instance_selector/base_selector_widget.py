@@ -3,7 +3,7 @@ Copyright (c) Cutleast
 """
 
 from abc import abstractmethod
-from typing import override
+from typing import Generic, TypeVar, override
 
 from PySide6.QtCore import QEvent, QObject, Signal
 from PySide6.QtGui import QWheelEvent
@@ -11,31 +11,34 @@ from PySide6.QtWidgets import QComboBox, QSpinBox, QWidget
 
 from mod_manager_lib.core.game import Game
 from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
+from mod_manager_lib.core.mod_manager.mod_manager import ModManager
+from mod_manager_lib.core.mod_manager.mod_manager_api import ModManagerApi
+
+I = TypeVar("I", bound=InstanceInfo)  # noqa: E741
+M = TypeVar("M", bound=ModManagerApi)
 
 
-class BaseSelectorWidget[I: InstanceInfo](QWidget):
+class BaseSelectorWidget(QWidget, Generic[I, M]):
     """
     Base class for selecting instances from a preselected mod manager.
     """
 
+    _api: M
+    """The API of the corresponding mod manager."""
+
     _instance_names: list[str]
-    """
-    List of possible instance names.
-    """
+    """List of possible instance names."""
 
     changed = Signal()
-    """
-    This signal gets emitted everytime the selected instance changes.
-    """
+    """This signal gets emitted everytime the selected instance changes."""
 
     valid = Signal(bool)
-    """
-    This signal gets emitted when the validation of the selected instance changes.
-    """
+    """This signal gets emitted when the validation of the selected instance changes."""
 
     def __init__(self, instance_names: list[str] = []) -> None:
         super().__init__()
 
+        self._api = self.get_mod_manager().get_api()  # pyright: ignore[reportAttributeAccessIssue]
         self._instance_names = instance_names
 
         self._init_ui()
@@ -44,10 +47,10 @@ class BaseSelectorWidget[I: InstanceInfo](QWidget):
 
     @staticmethod
     @abstractmethod
-    def get_id() -> str:
+    def get_mod_manager() -> ModManager:
         """
         Returns:
-            str: The internal id of the corresponding mod manager
+            ModManager: The mod manager this selector belongs to
         """
 
     @abstractmethod
@@ -81,12 +84,24 @@ class BaseSelectorWidget[I: InstanceInfo](QWidget):
         """
 
     @abstractmethod
-    def get_instance(self, game: Game) -> InstanceInfo:
+    def get_instance(self, game: Game) -> I:
         """
-        Returns the data for the selected instance.
+        Returns the data for the selected instance and game.
+
+        Args:
+            game (Game): The game for which the selected instance belongs to.
 
         Returns:
-            InstanceInfo: The data for the selected instance
+            I: The data for the selected instance
+        """
+
+    @abstractmethod
+    def set_instance(self, instance_data: I) -> None:
+        """
+        Sets the currently selected instance.
+
+        Args:
+            instance_data (I): The data for the selected instance.
         """
 
     @abstractmethod

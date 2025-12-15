@@ -11,6 +11,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QComboBox, QFileDialog, QGridLayout, QLabel
 
 from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.mod_manager.mod_manager import ModManager
 from mod_manager_lib.core.mod_manager.modorganizer.mo2_instance_info import (
     MO2InstanceInfo,
 )
@@ -19,7 +20,7 @@ from mod_manager_lib.core.mod_manager.modorganizer.modorganizer import ModOrgani
 from .base_selector_widget import BaseSelectorWidget
 
 
-class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo]):
+class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo, ModOrganizer]):
     """
     Class for selecting instances from Mod Organizer 2.
     """
@@ -31,8 +32,8 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo]):
 
     @override
     @staticmethod
-    def get_id() -> str:
-        return ModOrganizer.get_id()
+    def get_mod_manager() -> ModManager:
+        return ModManager.ModOrganizer
 
     @override
     def _init_ui(self) -> None:
@@ -89,6 +90,7 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo]):
         self.__instance_dropdown.addItem(self.tr("Please select..."))
         self.__instance_dropdown.addItems(self._instance_names)
         self.__instance_dropdown.addItem("Portable")
+        self.__portable_path_entry.setText("")
         self.__update_profile_dropdown()
 
     def __update_profile_dropdown(self) -> None:
@@ -111,7 +113,7 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo]):
         self.__profile_dropdown.addItem(self.tr("Please select..."))
         if mo2_ini_path.is_file():
             self.__profile_dropdown.addItems(
-                ModOrganizer.get_profile_names(instance_path / "ModOrganizer.ini")
+                self._api.get_profile_names(instance_path / "ModOrganizer.ini")
             )
         self.__profile_dropdown.setEnabled(self.__profile_dropdown.count() > 1)
         self.changed.emit()
@@ -119,16 +121,15 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo]):
     @override
     def validate(self) -> bool:
         valid: bool = (
-            0
-            < self.__instance_dropdown.currentIndex()
-            < (self.__instance_dropdown.count() - 1)
-            or (
-                self.__instance_dropdown.currentText() == "Portable"
-                and Path(
+            self.__instance_dropdown.currentIndex() > 0
+            and (
+                self.__instance_dropdown.currentText() != "Portable"
+                or Path(
                     self.__portable_path_entry.text() + "/ModOrganizer.ini"
                 ).is_file()
             )
-        ) and self.__profile_dropdown.currentIndex() != 0
+            and self.__profile_dropdown.currentIndex() > 0
+        )
 
         return valid
 
@@ -144,7 +145,7 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo]):
                 resolve(Path("%LOCALAPPDATA%") / "ModOrganizer") / instance_name
             )
         else:
-            instance_path = Path(self.__portable_path_entry.text())
+            instance_path = self.__portable_path_entry.getPath()
 
         if not (instance_path / "ModOrganizer.ini").is_file():
             raise ValueError(
@@ -166,7 +167,17 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo]):
         )
 
     @override
+    def set_instance(self, instance_data: MO2InstanceInfo) -> None:
+        self.__instance_dropdown.setCurrentText(
+            instance_data.display_name if instance_data.is_global else "Portable"
+        )
+        self.__portable_path_entry.setPath(instance_data.base_folder)
+        self.__profile_dropdown.setCurrentText(instance_data.profile)
+        self.changed.emit()
+
+    @override
     def reset(self) -> None:
         self.__instance_dropdown.setCurrentIndex(0)
         self.__portable_path_entry.setText("")
         self.__profile_dropdown.setCurrentIndex(0)
+        self.changed.emit()

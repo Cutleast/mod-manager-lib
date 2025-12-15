@@ -33,12 +33,12 @@ from mod_manager_lib.core.mod_manager.modorganizer.exceptions import (
 )
 from mod_manager_lib.core.utilities.filesystem import clean_fs_string
 
-from ..mod_manager import ModManager
+from ..mod_manager_api import ModManagerApi
 from .ini_file import INIFile
 from .mo2_instance_info import MO2InstanceInfo
 
 
-class ModOrganizer(ModManager[MO2InstanceInfo]):
+class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
     """
     Mod manager class for Mod Organizer 2.
     """

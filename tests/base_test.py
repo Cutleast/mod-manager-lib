@@ -7,27 +7,30 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Generator, Optional, override
+from typing import Generator, Optional, cast, override
 from unittest.mock import MagicMock
 
 import pytest
 from cutleast_core_lib.core.utilities.env_resolver import resolve
 from cutleast_core_lib.test.base_test import BaseTest as CoreBaseTest
 from cutleast_core_lib.test.utils import Utils
+from pyfakefs.fake_filesystem import FakeFilesystem
+from pytest_mock import MockerFixture
+from setup.mock_plyvel import MockPlyvelDB
+
 from mod_manager_lib.core.game_service import GameService
 from mod_manager_lib.core.instance.instance import Instance
 from mod_manager_lib.core.instance.metadata import Metadata
 from mod_manager_lib.core.instance.mod import Mod
 from mod_manager_lib.core.instance.tool import Tool
+from mod_manager_lib.core.mod_manager.mod_manager import ModManager
 from mod_manager_lib.core.mod_manager.modorganizer.mo2_instance_info import (
     MO2InstanceInfo,
 )
 from mod_manager_lib.core.mod_manager.modorganizer.modorganizer import ModOrganizer
 from mod_manager_lib.core.mod_manager.vortex.leveldb import LevelDB
 from mod_manager_lib.core.mod_manager.vortex.profile_info import ProfileInfo
-from pyfakefs.fake_filesystem import FakeFilesystem
-from pytest_mock import MockerFixture
-from setup.mock_plyvel import MockPlyvelDB
+from mod_manager_lib.core.mod_manager.vortex.vortex import Vortex
 
 
 class BaseTest(CoreBaseTest):
@@ -121,6 +124,10 @@ class BaseTest(CoreBaseTest):
         fs.set_disk_usage(total_size=1024**3, path="C:")
         fs.set_disk_usage(total_size=1024**3, path="E:")
 
+        # Update Vortex path explicitely as it may be the real fs path
+        vortex: Vortex = cast(Vortex, ModManager.Vortex.get_api())
+        vortex.db_path = Path.cwd()  # this path is guaranteed to exist
+
         return fs
 
     @pytest.fixture
@@ -135,7 +142,7 @@ class BaseTest(CoreBaseTest):
         base_dir_path = Path("C:\\Modding\\Test Instance")
 
         return MO2InstanceInfo(
-            display_name="Test Instance",
+            display_name="Portable",
             game=GameService.get_game_by_id("skyrimse"),
             profile="Default",
             is_global=False,
@@ -184,7 +191,7 @@ class BaseTest(CoreBaseTest):
         """
 
         return Instance(
-            display_name="Test Instance",
+            display_name="Portable",
             game_folder=Path("E:\\SteamLibrary\\Skyrim Special Edition"),
             mods=[
                 Mod(

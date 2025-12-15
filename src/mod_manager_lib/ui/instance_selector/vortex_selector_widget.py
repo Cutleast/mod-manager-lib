@@ -5,28 +5,30 @@ Copyright (c) Cutleast
 import re
 from typing import Optional, override
 
+from cutleast_core_lib.ui.widgets.placeholder_dropdown import PlaceholderDropdown
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QComboBox, QGridLayout, QLabel
+from PySide6.QtWidgets import QGridLayout, QLabel
 
 from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.mod_manager.mod_manager import ModManager
 from mod_manager_lib.core.mod_manager.vortex.profile_info import ProfileInfo
 from mod_manager_lib.core.mod_manager.vortex.vortex import Vortex
 
 from .base_selector_widget import BaseSelectorWidget
 
 
-class VortexSelectorWidget(BaseSelectorWidget[ProfileInfo]):
+class VortexSelectorWidget(BaseSelectorWidget[ProfileInfo, Vortex]):
     """
     Class for selecting profiles from Vortex.
     """
 
-    __profile_dropdown: QComboBox
+    __profile_dropdown: PlaceholderDropdown
     __glayout: QGridLayout
 
     @override
     @staticmethod
-    def get_id() -> str:
-        return Vortex.get_id()
+    def get_mod_manager() -> ModManager:
+        return ModManager.Vortex
 
     @override
     def _init_ui(self) -> None:
@@ -40,9 +42,8 @@ class VortexSelectorWidget(BaseSelectorWidget[ProfileInfo]):
         profile_label = QLabel(self.tr("Profile:"))
         self.__glayout.addWidget(profile_label, 0, 0)
 
-        self.__profile_dropdown = QComboBox()
+        self.__profile_dropdown = PlaceholderDropdown()
         self.__profile_dropdown.installEventFilter(self)
-        self.__profile_dropdown.addItem(self.tr("Please select..."))
         self.__profile_dropdown.addItems(self._instance_names)
         self.__profile_dropdown.currentTextChanged.connect(
             lambda _: self.changed.emit()
@@ -52,13 +53,14 @@ class VortexSelectorWidget(BaseSelectorWidget[ProfileInfo]):
     @override
     def _update(self) -> None:
         self.__profile_dropdown.clear()
-        self.__profile_dropdown.addItem(self.tr("Please select..."))
         self.__profile_dropdown.addItems(self._instance_names)
         self.changed.emit()
 
     @override
     def validate(self) -> bool:
-        return self.__profile_dropdown.currentIndex() != 0
+        valid: bool = self.__profile_dropdown.currentIndex() >= 0
+
+        return valid
 
     @override
     def get_instance(self, game: Game) -> ProfileInfo:
@@ -73,5 +75,9 @@ class VortexSelectorWidget(BaseSelectorWidget[ProfileInfo]):
         return ProfileInfo(display_name=instance_name, game=game, id=profile_id)
 
     @override
+    def set_instance(self, instance_data: ProfileInfo) -> None:
+        self.__profile_dropdown.setCurrentText(instance_data.display_name)
+
+    @override
     def reset(self) -> None:
-        self.__profile_dropdown.setCurrentIndex(0)
+        self.__profile_dropdown.setCurrentIndex(-1)

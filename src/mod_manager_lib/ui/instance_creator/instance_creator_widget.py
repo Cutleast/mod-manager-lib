@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 from mod_manager_lib.core.game import Game
 from mod_manager_lib.core.mod_manager import MOD_MANAGERS
 from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
-from mod_manager_lib.core.mod_manager.mod_manager import ModManager
+from mod_manager_lib.core.mod_manager.mod_manager_api import ModManagerApi
 
 from . import INSTANCE_WIDGETS
 from .base_creator_widget import BaseCreatorWidget
@@ -35,12 +35,12 @@ class InstanceCreatorWidget(QWidget):
     This signal is emitted when the instance is valid.
     """
 
-    __sel_mod_manager: Optional[ModManager] = None
+    __sel_mod_manager: Optional[ModManagerApi] = None
     """
     Selected destination mod manager.
     """
 
-    __mod_managers: dict[ModManager, BaseCreatorWidget]
+    __mod_managers: dict[ModManagerApi, BaseCreatorWidget]
     """
     Maps mod managers to their corresponding instance widgets.
     """
@@ -100,12 +100,14 @@ class InstanceCreatorWidget(QWidget):
         self.__vlayout.addLayout(self.__instance_stack_layout)
 
         self.__mod_managers = {}
-        mod_manager_ids: dict[str, type[ModManager]] = {
+        mod_manager_ids: dict[str, type[ModManagerApi]] = {
             mod_manager.get_id(): mod_manager for mod_manager in MOD_MANAGERS
         }
 
         for instance_widget_type in INSTANCE_WIDGETS:
-            mod_manager: ModManager = mod_manager_ids[instance_widget_type.get_id()]()
+            mod_manager: ModManagerApi = mod_manager_ids[
+                instance_widget_type.get_id()
+            ]()
 
             instance_widget: BaseCreatorWidget = instance_widget_type()
             instance_widget.valid.connect(self.instance_valid.emit)
@@ -114,16 +116,16 @@ class InstanceCreatorWidget(QWidget):
             self.__mod_managers[mod_manager] = instance_widget
 
     def __on_mod_manager_select(self, value: str) -> None:
-        mod_manager_names: dict[str, ModManager] = {
+        mod_manager_names: dict[str, ModManagerApi] = {
             mod_manager.get_display_name(): mod_manager
             for mod_manager in self.__mod_managers.keys()
         }
 
-        selected_mod_manager: Optional[ModManager] = mod_manager_names.get(value)
+        selected_mod_manager: Optional[ModManagerApi] = mod_manager_names.get(value)
 
         self.__set_cur_mod_manager(selected_mod_manager)
 
-    def __set_cur_mod_manager(self, mod_manager: Optional[ModManager]) -> None:
+    def __set_cur_mod_manager(self, mod_manager: Optional[ModManagerApi]) -> None:
         if mod_manager is not None:
             instance_widget: BaseCreatorWidget = self.__mod_managers[mod_manager]
             self.__instance_stack_layout.setCurrentWidget(instance_widget)
@@ -134,7 +136,7 @@ class InstanceCreatorWidget(QWidget):
 
         self.__sel_mod_manager = mod_manager
 
-    def get_selected_mod_manager(self) -> Optional[ModManager]:
+    def get_selected_mod_manager(self) -> Optional[ModManagerApi]:
         """
         Returns the currently selected mod manager.
 
@@ -175,7 +177,7 @@ class InstanceCreatorWidget(QWidget):
             InstanceData: The customized destination instance data.
         """
 
-        mod_manager: Optional[ModManager] = self.get_selected_mod_manager()
+        mod_manager: Optional[ModManagerApi] = self.get_selected_mod_manager()
 
         if mod_manager is None:
             raise ValueError("No mod manager selected!")

@@ -3,8 +3,12 @@ Copyright (c) Cutleast
 """
 
 from pathlib import Path
+from typing import Annotated, Literal, override
+
+from pydantic import Field
 
 from ..instance_info import InstanceInfo
+from ..mod_manager import ModManager
 
 
 class MO2InstanceInfo(InstanceInfo, frozen=True):
@@ -13,14 +17,10 @@ class MO2InstanceInfo(InstanceInfo, frozen=True):
     """
 
     profile: str
-    """
-    The selected profile of the instance.
-    """
+    """The selected profile of the instance."""
 
     is_global: bool
-    """
-    Whether the instance is a global or portable instance.
-    """
+    """Whether the instance is a global or portable instance."""
 
     base_folder: Path
     """
@@ -29,25 +29,26 @@ class MO2InstanceInfo(InstanceInfo, frozen=True):
     """
 
     mods_folder: Path
-    """
-    Path to the instance's "mods" folder.
-    """
+    """Path to the instance's "mods" folder."""
 
     profiles_folder: Path
+    """Path to the instance's "profiles" folder."""
+
+    install_mo2: Annotated[bool, Field(exclude=True)] = True
     """
-    Path to the instance's "profiles" folder.
+    Whether to install Mod Organizer 2 to the instance (only relevant for portable
+    destination instances) upon instance creation.
     """
 
-    install_mo2: bool = True
+    use_root_builder: Annotated[bool, Field(exclude=True)] = True
     """
-    Whether to install Mod Organizer 2 to the instance
-    (only relevant for portable destination instances).
+    Whether the instance uses the Root Builder plugin instead of copying files to the
+    game folder.
     """
 
-    use_root_builder: bool = True
-    """
-    Whether to use the root builder MO2 plugin for mods with
-    files for the game's root folder.
-    MMM won't download the root builder plugin itself but will construct the respective 
-    folder structures for root files instead of copying them to the real game folder.
-    """
+    mod_manager: Literal[ModManager.ModOrganizer] = ModManager.ModOrganizer
+    """Discriminator value for deserialization."""
+
+    @override
+    def get_mod_manager(self) -> ModManager:
+        return self.mod_manager
