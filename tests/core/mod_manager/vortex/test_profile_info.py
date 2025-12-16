@@ -26,7 +26,10 @@ class TestProfileInfo(BaseTest):
         )
 
         # when
-        actual = profile_info.model_dump(mode="json")
+        actual = profile_info.model_dump(
+            mode="json",
+            exclude_defaults=True,  # to test that the discriminator is still serialized
+        )
 
         # then
         assert actual == {

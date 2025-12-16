@@ -32,7 +32,10 @@ class TestMO2InstanceInfo(BaseTest):
         )
 
         # when
-        actual: dict[str, Any] = mo2_instance_info.model_dump(mode="json")
+        actual: dict[str, Any] = mo2_instance_info.model_dump(
+            mode="json",
+            exclude_defaults=True,  # to test that the discriminator is still serialized
+        )
 
         # then
         assert actual == {

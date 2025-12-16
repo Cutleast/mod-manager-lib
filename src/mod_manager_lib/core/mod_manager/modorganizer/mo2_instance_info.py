@@ -5,12 +5,14 @@ Copyright (c) Cutleast
 from pathlib import Path
 from typing import Annotated, Literal, override
 
+from cutleast_core_lib.core.utilities.pydantic_utils import include_literal_defaults
 from pydantic import Field
 
 from ..instance_info import InstanceInfo
 from ..mod_manager import ModManager
 
 
+@include_literal_defaults
 class MO2InstanceInfo(InstanceInfo, frozen=True):
     """
     Class for identifying an MO2 instance and profile.
