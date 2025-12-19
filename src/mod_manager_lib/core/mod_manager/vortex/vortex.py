@@ -216,7 +216,7 @@ class Vortex(ModManagerApi[ProfileInfo]):
         for m, modname in enumerate(modnames):
             if modname not in installed_mods:
                 self.log.warning(
-                    f"Failed to load mod {modname!r}: Mod is not installed!"
+                    f"Failed to load mod '{modname}': Mod is not installed!"
                 )
                 continue
 
@@ -230,6 +230,8 @@ class Vortex(ModManagerApi[ProfileInfo]):
                     maximum=len(modnames),
                 ),
             )
+
+            self.log.info(f"Loading mod '{modname}'...")
 
             moddata = installed_mods[modname]
             mod_meta_data: dict[str, Any] = moddata["attributes"]

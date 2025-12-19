@@ -243,6 +243,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                     maximum=len(modnames),
                 ),
             )
+            self.log.info(f"Loading mod '{modname}'...")
 
             mod_path: Path = mods_dir / modname
             mod_meta_path: Path = mod_path / "meta.ini"
@@ -253,7 +254,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                 metadata = Metadata(
                     mod_id=None, file_id=None, version="", file_name="", game_id=""
                 )
-                self.log.warning(f"No Metadata available for {modname!r}!")
+                self.log.warning(f"No Metadata available for '{modname}'!")
 
             deploy_path: Optional[Path] = None
             if (mod_path / "Root").is_dir():
@@ -340,12 +341,13 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                         short_name_overrides.get(game_name, game_name)
                     ).nexus_id
                 except KeyError:
-                    self.log.warning(
-                        f"No game specified for {meta_ini_path.parent.name!r}!"
+                    self.log.debug(
+                        f"No game specified for '{meta_ini_path.parent.name}'. Falling "
+                        "back to instance's default..."
                     )
                 except ValueError:
                     self.log.warning(
-                        f"Unknown game for mod {meta_ini_path.parent.name!r}: {general.get('gameName')}"
+                        f"Unknown game for mod '{meta_ini_path.parent.name}': {general.get('gameName')}"
                     )
 
                 if "installedFiles" in meta_ini_data:
@@ -355,10 +357,10 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                     )
             except Exception as ex:
                 self.log.error(
-                    f"Failed to parse meta.ini in {str(meta_ini_path.parent)!r}: {ex}"
+                    f"Failed to parse meta.ini in '{meta_ini_path.parent}': {ex}"
                 )
         else:
-            self.log.warning(f"Incomplete meta.ini in {str(meta_ini_path.parent)!r}!")
+            self.log.warning(f"Incomplete meta.ini in '{meta_ini_path.parent}'!")
 
         return Metadata(
             mod_id=mod_id,
