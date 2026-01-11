@@ -112,7 +112,7 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo, ModOrganize
             self.__profile_dropdown.addItems(
                 self._api.get_profile_names(instance_path / "ModOrganizer.ini")
             )
-        self.__profile_dropdown.setEnabled(self.__profile_dropdown.count() > 1)
+        self.__profile_dropdown.setEnabled(self.__profile_dropdown.count() > 0)
         self.changed.emit()
 
     @override
