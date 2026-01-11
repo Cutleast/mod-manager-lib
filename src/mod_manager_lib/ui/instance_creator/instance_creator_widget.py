@@ -22,7 +22,6 @@ from PySide6.QtWidgets import (
 from mod_manager_lib.core.game import Game
 from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
 from mod_manager_lib.core.mod_manager.mod_manager import ModManager
-from mod_manager_lib.core.mod_manager.mod_manager_api import ModManagerApi
 
 from . import INSTANCE_WIDGETS
 from .base_creator_widget import BaseCreatorWidget
@@ -156,7 +155,7 @@ class InstanceCreatorWidget(QWidget):
             InstanceData: The customized destination instance data.
         """
 
-        mod_manager: Optional[ModManagerApi] = self.get_selected_mod_manager()
+        mod_manager: Optional[ModManager] = self.get_selected_mod_manager()
 
         if mod_manager is None:
             raise ValueError("No mod manager selected!")
