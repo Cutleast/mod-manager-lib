@@ -188,6 +188,16 @@ class InstanceSelectorWidget(QWidget):
         instance_widget: BaseSelectorWidget = self.__mod_managers[mod_manager]
         return instance_widget.validate()
 
+    def get_cur_mod_manager(self) -> Optional[ModManager]:
+        """
+        Returns the currently selected mod manager.
+
+        Returns:
+            Optional[ModManager]: The mod manager or None if no mod manager is selected.
+        """
+
+        return self.__cur_mod_manager
+
     def get_cur_instance_data(self) -> Optional[InstanceInfo]:
         """
         Returns the currently selected instance data.
