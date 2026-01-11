@@ -9,8 +9,8 @@ from base_test import BaseTest
 from cutleast_core_lib.core.utilities.env_resolver import resolve
 from cutleast_core_lib.test.utils import Utils
 from cutleast_core_lib.ui.widgets.browse_edit import BrowseLineEdit
+from cutleast_core_lib.ui.widgets.placeholder_dropdown import PlaceholderDropdown
 from pyfakefs.fake_filesystem import FakeFilesystem
-from PySide6.QtWidgets import QComboBox
 from pytestqt.qtbot import QtBot
 
 from mod_manager_lib.core.game_service import GameService
@@ -28,7 +28,10 @@ class TestModOrganizerSelectorWidget(BaseTest):
     Tests `ui.modinstance_selector.modorganizer_selector_widget.ModOrganizerSelectorWidget`.
     """
 
-    INSTANCE_DROPDOWN: tuple[str, type[QComboBox]] = "instance_dropdown", QComboBox
+    INSTANCE_DROPDOWN: tuple[str, type[PlaceholderDropdown]] = (
+        "instance_dropdown",
+        PlaceholderDropdown,
+    )
     """Identifier for accessing the private instance_dropdown field."""
 
     PORTABLE_PATH_ENTRY: tuple[str, type[BrowseLineEdit]] = (
@@ -37,7 +40,10 @@ class TestModOrganizerSelectorWidget(BaseTest):
     )
     """Identifier for accessing the private portable_path_entry field."""
 
-    PROFILE_DROPDOWN: tuple[str, type[QComboBox]] = "profile_dropdown", QComboBox
+    PROFILE_DROPDOWN: tuple[str, type[PlaceholderDropdown]] = (
+        "profile_dropdown",
+        PlaceholderDropdown,
+    )
     """Identifier for accessing the private profile_dropdown field."""
 
     @pytest.fixture
@@ -60,21 +66,21 @@ class TestModOrganizerSelectorWidget(BaseTest):
         Asserts the initial state of the widget.
         """
 
-        instance_dropdown: QComboBox = Utils.get_private_field(
+        instance_dropdown: PlaceholderDropdown = Utils.get_private_field(
             widget, *TestModOrganizerSelectorWidget.INSTANCE_DROPDOWN
         )
         portable_path_entry: BrowseLineEdit = Utils.get_private_field(
             widget, *TestModOrganizerSelectorWidget.PORTABLE_PATH_ENTRY
         )
-        profile_dropdown: QComboBox = Utils.get_private_field(
+        profile_dropdown: PlaceholderDropdown = Utils.get_private_field(
             widget, *TestModOrganizerSelectorWidget.PROFILE_DROPDOWN
         )
 
-        assert instance_dropdown.currentIndex() == 0
+        assert instance_dropdown.currentIndex() == -1
         assert instance_dropdown.isEnabled()
         assert portable_path_entry.text() == ""
         assert not portable_path_entry.isEnabled()
-        assert profile_dropdown.currentIndex() == 0
+        assert profile_dropdown.currentIndex() == -1
         assert not profile_dropdown.isEnabled()
         assert not widget.validate()
 
@@ -93,36 +99,36 @@ class TestModOrganizerSelectorWidget(BaseTest):
         """
 
         # given
-        instance_dropdown: QComboBox = Utils.get_private_field(
+        instance_dropdown: PlaceholderDropdown = Utils.get_private_field(
             widget, *TestModOrganizerSelectorWidget.INSTANCE_DROPDOWN
         )
         portable_path_entry: BrowseLineEdit = Utils.get_private_field(
             widget, *TestModOrganizerSelectorWidget.PORTABLE_PATH_ENTRY
         )
-        profile_dropdown: QComboBox = Utils.get_private_field(
+        profile_dropdown: PlaceholderDropdown = Utils.get_private_field(
             widget, *TestModOrganizerSelectorWidget.PROFILE_DROPDOWN
         )
 
         # then
-        assert instance_dropdown.count() == 3
-        assert instance_dropdown.itemText(1) == "Test Instance"
-        assert instance_dropdown.itemText(2) == "Portable"
+        assert instance_dropdown.count() == 2
+        assert instance_dropdown.itemText(0) == "Test Instance"
+        assert instance_dropdown.itemText(1) == "Portable"
 
         # when
         with qtbot.waitSignal(widget.changed):
-            instance_dropdown.setCurrentIndex(1)
+            instance_dropdown.setCurrentIndex(0)
 
         # then
         assert not portable_path_entry.isEnabled()
         assert profile_dropdown.isEnabled()
-        assert profile_dropdown.count() == 3
-        assert profile_dropdown.itemText(1) == "Default"
-        assert profile_dropdown.itemText(2) == "TestProfile"
+        assert profile_dropdown.count() == 2
+        assert profile_dropdown.itemText(0) == "Default"
+        assert profile_dropdown.itemText(1) == "TestProfile"
         assert not widget.validate()
 
         # when
         with qtbot.waitSignal(widget.changed):
-            profile_dropdown.setCurrentIndex(2)
+            profile_dropdown.setCurrentIndex(1)
 
         # then
         assert widget.validate()
@@ -152,25 +158,25 @@ class TestModOrganizerSelectorWidget(BaseTest):
         """
 
         # given
-        instance_dropdown: QComboBox = Utils.get_private_field(
+        instance_dropdown: PlaceholderDropdown = Utils.get_private_field(
             widget, *TestModOrganizerSelectorWidget.INSTANCE_DROPDOWN
         )
         portable_path_entry: BrowseLineEdit = Utils.get_private_field(
             widget, *TestModOrganizerSelectorWidget.PORTABLE_PATH_ENTRY
         )
-        profile_dropdown: QComboBox = Utils.get_private_field(
+        profile_dropdown: PlaceholderDropdown = Utils.get_private_field(
             widget, *TestModOrganizerSelectorWidget.PROFILE_DROPDOWN
         )
 
         # then
-        assert instance_dropdown.count() == 3
-        assert instance_dropdown.itemText(1) == "Test Instance"
-        assert instance_dropdown.itemText(2) == "Portable"
+        assert instance_dropdown.count() == 2
+        assert instance_dropdown.itemText(0) == "Test Instance"
+        assert instance_dropdown.itemText(1) == "Portable"
 
         # when
         with qtbot.waitSignal(widget.changed):
             with qtbot.waitSignal(widget.valid) as valid_signal:
-                instance_dropdown.setCurrentIndex(2)
+                instance_dropdown.setCurrentIndex(1)
 
         # then
         assert valid_signal.args == [False]
@@ -186,15 +192,15 @@ class TestModOrganizerSelectorWidget(BaseTest):
         # then
         assert valid_signal.args == [False]
         assert profile_dropdown.isEnabled()
-        assert profile_dropdown.count() == 3
-        assert profile_dropdown.itemText(1) == "Default"
-        assert profile_dropdown.itemText(2) == "TestProfile"
+        assert profile_dropdown.count() == 2
+        assert profile_dropdown.itemText(0) == "Default"
+        assert profile_dropdown.itemText(1) == "TestProfile"
         assert not widget.validate()
 
         # when
         with qtbot.waitSignal(widget.changed):
             with qtbot.waitSignal(widget.valid) as valid_signal:
-                profile_dropdown.setCurrentIndex(2)
+                profile_dropdown.setCurrentIndex(1)
 
         # then
         assert valid_signal.args == [True]

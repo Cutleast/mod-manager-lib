@@ -7,8 +7,9 @@ from typing import override
 
 from cutleast_core_lib.core.utilities.env_resolver import resolve
 from cutleast_core_lib.ui.widgets.browse_edit import BrowseLineEdit
+from cutleast_core_lib.ui.widgets.placeholder_dropdown import PlaceholderDropdown
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QComboBox, QFileDialog, QGridLayout, QLabel
+from PySide6.QtWidgets import QFileDialog, QGridLayout, QLabel
 
 from mod_manager_lib.core.game import Game
 from mod_manager_lib.core.mod_manager.mod_manager import ModManager
@@ -25,9 +26,9 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo, ModOrganize
     Class for selecting instances from Mod Organizer 2.
     """
 
-    __instance_dropdown: QComboBox
+    __instance_dropdown: PlaceholderDropdown
     __portable_path_entry: BrowseLineEdit
-    __profile_dropdown: QComboBox
+    __profile_dropdown: PlaceholderDropdown
     __glayout: QGridLayout
 
     @override
@@ -47,9 +48,8 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo, ModOrganize
         instance_label = QLabel(self.tr("Instance:"))
         self.__glayout.addWidget(instance_label, 0, 0)
 
-        self.__instance_dropdown = QComboBox()
+        self.__instance_dropdown = PlaceholderDropdown()
         self.__instance_dropdown.installEventFilter(self)
-        self.__instance_dropdown.addItem(self.tr("Please select..."))
         self.__instance_dropdown.addItems(self._instance_names)
         self.__instance_dropdown.addItem("Portable")
         self.__instance_dropdown.currentTextChanged.connect(
@@ -75,9 +75,8 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo, ModOrganize
         profile_label = QLabel(self.tr("Profile:"))
         self.__glayout.addWidget(profile_label, 2, 0)
 
-        self.__profile_dropdown = QComboBox()
+        self.__profile_dropdown = PlaceholderDropdown()
         self.__profile_dropdown.installEventFilter(self)
-        self.__profile_dropdown.addItem(self.tr("Please select..."))
         self.__profile_dropdown.currentTextChanged.connect(
             lambda _: self.changed.emit()
         )
@@ -110,7 +109,6 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo, ModOrganize
         mo2_ini_path: Path = instance_path / "ModOrganizer.ini"
 
         self.__profile_dropdown.clear()
-        self.__profile_dropdown.addItem(self.tr("Please select..."))
         if mo2_ini_path.is_file():
             self.__profile_dropdown.addItems(
                 self._api.get_profile_names(instance_path / "ModOrganizer.ini")
@@ -121,14 +119,14 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo, ModOrganize
     @override
     def validate(self) -> bool:
         valid: bool = (
-            self.__instance_dropdown.currentIndex() > 0
+            self.__instance_dropdown.currentIndex() > -1
             and (
                 self.__instance_dropdown.currentText() != "Portable"
                 or Path(
                     self.__portable_path_entry.text() + "/ModOrganizer.ini"
                 ).is_file()
             )
-            and self.__profile_dropdown.currentIndex() > 0
+            and self.__profile_dropdown.currentIndex() > -1
         )
 
         return valid
@@ -177,7 +175,7 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo, ModOrganize
 
     @override
     def reset(self) -> None:
-        self.__instance_dropdown.setCurrentIndex(0)
+        self.__instance_dropdown.setCurrentIndex(-1)
         self.__portable_path_entry.setText("")
-        self.__profile_dropdown.setCurrentIndex(0)
+        self.__profile_dropdown.setCurrentIndex(-1)
         self.changed.emit()
