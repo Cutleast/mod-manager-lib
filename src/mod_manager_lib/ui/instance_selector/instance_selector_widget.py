@@ -81,8 +81,6 @@ class InstanceSelectorWidget(QWidget):
         self.__mod_manager_dropdown.setCurrentValue(None)
 
     def __init_ui(self) -> None:
-        self.setObjectName("transparent")
-
         self.__vlayout = QVBoxLayout()
         self.__vlayout.setContentsMargins(0, 0, 0, 0)
         self.__vlayout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -99,11 +97,11 @@ class InstanceSelectorWidget(QWidget):
         self.__vlayout.addLayout(glayout)
 
         mod_manager_label = QLabel(self.tr("Mod manager:"))
-        glayout.addWidget(mod_manager_label, 1, 0)
+        glayout.addWidget(mod_manager_label, 0, 0)
 
         self.__mod_manager_dropdown = EnumPlaceholderDropdown(ModManager)
         self.__mod_manager_dropdown.installEventFilter(self)
-        glayout.addWidget(self.__mod_manager_dropdown, 1, 1)
+        glayout.addWidget(self.__mod_manager_dropdown, 0, 1)
 
     def __init_instance_widgets(self) -> None:
         self.__instance_stack_layout = QStackedLayout()

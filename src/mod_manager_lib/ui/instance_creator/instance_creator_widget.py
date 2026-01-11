@@ -4,8 +4,11 @@ Copyright (c) Cutleast
 
 from typing import Optional, override
 
+from cutleast_core_lib.ui.widgets.enum_placeholder_dropdown import (
+    EnumPlaceholderDropdown,
+)
 from PySide6.QtCore import QEvent, QObject, Qt, Signal
-from PySide6.QtGui import QIcon, QWheelEvent
+from PySide6.QtGui import QWheelEvent
 from PySide6.QtWidgets import (
     QComboBox,
     QGridLayout,
@@ -17,8 +20,8 @@ from PySide6.QtWidgets import (
 )
 
 from mod_manager_lib.core.game import Game
-from mod_manager_lib.core.mod_manager import MOD_MANAGERS
 from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
+from mod_manager_lib.core.mod_manager.mod_manager import ModManager
 from mod_manager_lib.core.mod_manager.mod_manager_api import ModManagerApi
 
 from . import INSTANCE_WIDGETS
@@ -35,18 +38,18 @@ class InstanceCreatorWidget(QWidget):
     This signal is emitted when the instance is valid.
     """
 
-    __sel_mod_manager: Optional[ModManagerApi] = None
+    __cur_mod_manager: Optional[ModManager] = None
     """
     Selected destination mod manager.
     """
 
-    __mod_managers: dict[ModManagerApi, BaseCreatorWidget]
+    __mod_managers: dict[ModManager, BaseCreatorWidget]
     """
     Maps mod managers to their corresponding instance widgets.
     """
 
     __vlayout: QVBoxLayout
-    __mod_manager_dropdown: QComboBox
+    __mod_manager_dropdown: EnumPlaceholderDropdown[ModManager]
     __instance_stack_layout: QStackedLayout
     __placeholder_widget: QWidget
 
@@ -55,10 +58,14 @@ class InstanceCreatorWidget(QWidget):
 
         self.__init_ui()
 
-    def __init_ui(self) -> None:
-        self.setObjectName("secondary")
+        self.__mod_manager_dropdown.currentValueChanged.connect(
+            self.__set_cur_mod_manager
+        )
+        self.__mod_manager_dropdown.setCurrentValue(None)
 
+    def __init_ui(self) -> None:
         self.__vlayout = QVBoxLayout()
+        self.__vlayout.setContentsMargins(0, 0, 0, 0)
         self.__vlayout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.setLayout(self.__vlayout)
 
@@ -72,24 +79,11 @@ class InstanceCreatorWidget(QWidget):
         glayout.setColumnStretch(1, 3)
         self.__vlayout.addLayout(glayout)
 
-        mod_manager_label = QLabel(self.tr("Mod Manager:"))
+        mod_manager_label = QLabel(self.tr("Mod manager:"))
         glayout.addWidget(mod_manager_label, 0, 0)
 
-        self.__mod_manager_dropdown = QComboBox()
+        self.__mod_manager_dropdown = EnumPlaceholderDropdown(ModManager)
         self.__mod_manager_dropdown.installEventFilter(self)
-        self.__mod_manager_dropdown.setEditable(False)
-        self.__mod_manager_dropdown.addItem(self.tr("Please select..."))
-        self.__mod_manager_dropdown.addItems(
-            [mod_manager.get_display_name() for mod_manager in MOD_MANAGERS]
-        )
-        for m, mod_manager in enumerate(MOD_MANAGERS, start=1):
-            self.__mod_manager_dropdown.setItemIcon(
-                m, QIcon(mod_manager.get_icon_name())
-            )
-
-        self.__mod_manager_dropdown.currentTextChanged.connect(
-            self.__on_mod_manager_select
-        )
         glayout.addWidget(self.__mod_manager_dropdown, 0, 1)
 
     def __init_instance_widgets(self) -> None:
@@ -100,14 +94,9 @@ class InstanceCreatorWidget(QWidget):
         self.__vlayout.addLayout(self.__instance_stack_layout)
 
         self.__mod_managers = {}
-        mod_manager_ids: dict[str, type[ModManagerApi]] = {
-            mod_manager.get_id(): mod_manager for mod_manager in MOD_MANAGERS
-        }
 
         for instance_widget_type in INSTANCE_WIDGETS:
-            mod_manager: ModManagerApi = mod_manager_ids[
-                instance_widget_type.get_id()
-            ]()
+            mod_manager: ModManager = instance_widget_type.get_mod_manager()
 
             instance_widget: BaseCreatorWidget = instance_widget_type()
             instance_widget.valid.connect(self.instance_valid.emit)
@@ -115,17 +104,7 @@ class InstanceCreatorWidget(QWidget):
             self.__instance_stack_layout.addWidget(instance_widget)
             self.__mod_managers[mod_manager] = instance_widget
 
-    def __on_mod_manager_select(self, value: str) -> None:
-        mod_manager_names: dict[str, ModManagerApi] = {
-            mod_manager.get_display_name(): mod_manager
-            for mod_manager in self.__mod_managers.keys()
-        }
-
-        selected_mod_manager: Optional[ModManagerApi] = mod_manager_names.get(value)
-
-        self.__set_cur_mod_manager(selected_mod_manager)
-
-    def __set_cur_mod_manager(self, mod_manager: Optional[ModManagerApi]) -> None:
+    def __set_cur_mod_manager(self, mod_manager: Optional[ModManager]) -> None:
         if mod_manager is not None:
             instance_widget: BaseCreatorWidget = self.__mod_managers[mod_manager]
             self.__instance_stack_layout.setCurrentWidget(instance_widget)
@@ -134,9 +113,9 @@ class InstanceCreatorWidget(QWidget):
             self.__instance_stack_layout.setCurrentWidget(self.__placeholder_widget)
             self.instance_valid.emit(False)
 
-        self.__sel_mod_manager = mod_manager
+        self.__cur_mod_manager = mod_manager
 
-    def get_selected_mod_manager(self) -> Optional[ModManagerApi]:
+    def get_selected_mod_manager(self) -> Optional[ModManager]:
         """
         Returns the currently selected mod manager.
 
@@ -144,7 +123,7 @@ class InstanceCreatorWidget(QWidget):
             Optional[ModManager]: The selected mod manager.
         """
 
-        return self.__sel_mod_manager
+        return self.__cur_mod_manager
 
     def validate(self) -> bool:
         """
@@ -154,9 +133,9 @@ class InstanceCreatorWidget(QWidget):
             bool: whether the currently selected instance data is valid
         """
 
-        if self.__sel_mod_manager is not None:
+        if self.__cur_mod_manager is not None:
             instance_widget: BaseCreatorWidget = self.__mod_managers[
-                self.__sel_mod_manager
+                self.__cur_mod_manager
             ]
             return instance_widget.validate()
 

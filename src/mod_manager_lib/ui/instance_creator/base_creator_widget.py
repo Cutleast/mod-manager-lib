@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QWidget
 
 from mod_manager_lib.core.game import Game
 from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
+from mod_manager_lib.core.mod_manager.mod_manager import ModManager
 
 
 class BaseCreatorWidget[I: InstanceInfo](QWidget):
@@ -33,10 +34,10 @@ class BaseCreatorWidget[I: InstanceInfo](QWidget):
 
     @staticmethod
     @abstractmethod
-    def get_id() -> str:
+    def get_mod_manager() -> ModManager:
         """
         Returns:
-            str: The internal id of the corresponding mod manager.
+            ModManager: The mod manager this selector belongs to
         """
 
     @abstractmethod

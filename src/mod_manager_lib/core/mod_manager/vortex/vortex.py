@@ -657,6 +657,11 @@ class Vortex(ModManagerApi[ProfileInfo]):
                 overwriting_mod
             ).rsplit(".", 1)[0]
 
+            if overwriting_mod_filename == file_name:
+                raise ValueError(
+                    f"Cyclic dependency detected in '{mod.display_name}': Mod conflicts with itself!"
+                )
+
             # Check if a rule already exists
             if overwriting_mod_filename in self.__parse_mod_conflict_rules(rules):
                 continue
@@ -860,7 +865,12 @@ class Vortex(ModManagerApi[ProfileInfo]):
         self, instance: Instance, instance_data: ProfileInfo, activate_instance: bool
     ) -> None:
         profile_db_prefix: str = f"persistent###profiles###{instance_data.id}###"
-        profile_data: dict[str, Any] = self.__level_db.get_section(profile_db_prefix)
+        profile_data: dict[str, Any] = (
+            self.__level_db.get_section(profile_db_prefix)
+            .setdefault("persistent", {})
+            .setdefault("profiles", {})
+            .setdefault(instance_data.id, {})
+        )
         profile_data.setdefault("features", {})["local_game_settings"] = (
             instance.separate_ini_files
         )

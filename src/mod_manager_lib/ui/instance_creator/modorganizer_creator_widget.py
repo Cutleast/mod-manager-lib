@@ -19,10 +19,10 @@ from PySide6.QtWidgets import (
 )
 
 from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.mod_manager.mod_manager import ModManager
 from mod_manager_lib.core.mod_manager.modorganizer.mo2_instance_info import (
     MO2InstanceInfo,
 )
-from mod_manager_lib.core.mod_manager.modorganizer.modorganizer import ModOrganizer
 
 from .base_creator_widget import BaseCreatorWidget
 
@@ -43,8 +43,8 @@ class ModOrganizerCreatorWidget(BaseCreatorWidget[MO2InstanceInfo]):
 
     @override
     @staticmethod
-    def get_id() -> str:
-        return ModOrganizer.get_id()
+    def get_mod_manager() -> ModManager:
+        return ModManager.ModOrganizer
 
     @override
     def _init_ui(self) -> None:
