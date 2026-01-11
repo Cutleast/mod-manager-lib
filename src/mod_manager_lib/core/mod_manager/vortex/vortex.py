@@ -111,7 +111,7 @@ class Vortex(ModManagerApi[ProfileInfo]):
 
         self.log.info(f"Got {len(profiles)} profile(s) from database.")
 
-        return profiles
+        return sorted(profiles)
 
     @override
     def load_instance(

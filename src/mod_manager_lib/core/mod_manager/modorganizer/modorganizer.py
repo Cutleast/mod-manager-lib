@@ -105,7 +105,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
 
         self.log.info(f"Got {len(instances)} instances.")
 
-        return instances
+        return sorted(instances)
 
     @override
     def load_instance(
@@ -1031,7 +1031,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         else:
             prof_dir = base_dir / "profiles"
 
-        return [prof.name for prof in prof_dir.iterdir() if prof.is_dir()]
+        return sorted([prof.name for prof in prof_dir.iterdir() if prof.is_dir()])
 
     def detect_global_instances(self) -> bool:
         """
