@@ -100,6 +100,14 @@ class Mod(BaseModel):
             map(lambda f: f.path.relative_to(self.path), Mod.__get_files(self.path))
         )
 
+    @property
+    def file_objs(self) -> list[File]:
+        """
+        List of file objects.
+        """
+
+        return Mod.__get_files(self.path)
+
     @staticmethod
     @FunctionCache.cache
     def __get_files(path: Path) -> list[File]:

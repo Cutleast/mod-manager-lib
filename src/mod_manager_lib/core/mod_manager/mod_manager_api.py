@@ -9,6 +9,7 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Optional, override
 
+from cutleast_core_lib.core.filesystem.file import File
 from cutleast_core_lib.core.multithreading.progress import (
     ProgressUpdate,
     UpdateCallback,
@@ -346,22 +347,29 @@ class ModManagerApi[I: InstanceInfo](QObject):
                 Optional update callback for progress updates. Defaults to None.
         """
 
-        for f, file in enumerate(mod.files):
-            if file.name.lower() in blacklist:
+        files: list[File] = mod.file_objs
+        file_count: int = len(files)
+
+        for f, file in enumerate(files):
+            if file.path.name.lower() in blacklist:
                 self.log.info(
-                    f"Skipped file due to configured blacklist: {file.name!r}"
+                    f"Skipped file due to configured blacklist: {file.path.name!r}"
                 )
                 continue
 
-            src_path: Path = mod.path / file
-            dst_path: Path = mod_folder / file_redirects.get(file, file)
+            src_path: Path = file.path
+            rel_path: Path = file.path.relative_to(mod.path)
+            dst_path: Path = mod_folder / file_redirects.get(rel_path, rel_path)
 
             update(
                 update_callback,
                 ProgressUpdate(
-                    status_text=f"{file.name} ({scale_value(src_path.stat().st_size)})",
+                    status_text=(
+                        f"{rel_path} ({scale_value(file.size)} - {f + 1} "
+                        f"/ {file_count})..."
+                    ),
                     value=f,
-                    maximum=len(mod.files),
+                    maximum=file_count,
                 ),
             )
 
@@ -464,7 +472,10 @@ class ModManagerApi[I: InstanceInfo](QObject):
             update(
                 update_callback,
                 ProgressUpdate(
-                    status_text=f"{file.name} ({scale_value(file.stat().st_size)})",
+                    status_text=(
+                        f"{file.name} ({scale_value(file.stat().st_size)} - {f + 1} "
+                        f"/ {len(files)})..."
+                    ),
                     value=f,
                     maximum=len(files),
                 ),
@@ -540,7 +551,10 @@ class ModManagerApi[I: InstanceInfo](QObject):
             update(
                 update_callback,
                 ProgressUpdate(
-                    status_text=f"{file.name} ({scale_value(file.stat().st_size)})",
+                    status_text=(
+                        f"{file.name} ({scale_value(file.stat().st_size)} - {f + 1} "
+                        f"/ {len(files)})..."
+                    ),
                     value=f,
                     maximum=len(files),
                 ),
