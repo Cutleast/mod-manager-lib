@@ -482,7 +482,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
 
         for i in range(1, custom_executables_size + 1):
             try:
-                raw_exe_path: str = custom_executables[f"{i}\\binary"]
+                exe_path = Path(custom_executables[f"{i}\\binary"])
                 raw_args: str = custom_executables[f"{i}\\arguments"] or ""
                 name: str = custom_executables[f"{i}\\title"]
                 raw_working_dir: Optional[str] = custom_executables[
@@ -492,7 +492,6 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                 self.log.error(f"Failed to load tool with index {i}: {ex}", exc_info=ex)
                 continue
 
-            exe_path = Path(raw_exe_path)
             if exe_path.name in ModOrganizer.EXE_BLACKLIST:
                 self.log.debug(
                     f"Skipped tool '{exe_path.name}' due to mod manager blacklist."
