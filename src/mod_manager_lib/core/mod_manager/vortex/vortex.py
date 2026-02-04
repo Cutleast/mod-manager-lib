@@ -120,6 +120,7 @@ class Vortex(ModManagerApi[ProfileInfo]):
         modname_limit: int = 255,
         file_blacklist: list[str] = [],
         game_folder: Optional[Path] = None,
+        load_conflicts: bool = True,
         update_callback: Optional[UpdateCallback] = None,
     ) -> Instance:
         instance_name: str = instance_data.display_name
@@ -147,7 +148,12 @@ class Vortex(ModManagerApi[ProfileInfo]):
         )
 
         mods: list[Mod] = self._load_mods(
-            instance_data, game_folder, modname_limit, file_blacklist, update_callback
+            instance_data=instance_data,
+            game_folder=game_folder,
+            modname_limit=modname_limit,
+            file_blacklist=file_blacklist,
+            load_conflicts=load_conflicts,
+            update_callback=update_callback,
         )
         tools: list[Tool] = self._load_tools(
             instance_data, mods, game_folder, file_blacklist, update_callback
@@ -170,6 +176,7 @@ class Vortex(ModManagerApi[ProfileInfo]):
         game_folder: Path,
         modname_limit: int = 255,
         file_blacklist: list[str] = [],
+        load_conflicts: bool = True,
         update_callback: Optional[UpdateCallback] = None,
     ) -> list[Mod]:
         instance_name: str = instance_data.display_name
@@ -315,12 +322,13 @@ class Vortex(ModManagerApi[ProfileInfo]):
             if overrides:
                 file_overrides[mod] = overrides
 
-        self.__process_conflict_rules(mods, conflict_rules)
+        if load_conflicts:
+            self.__process_conflict_rules(mods, conflict_rules)
 
-        mod_overrides: dict[Mod, list[Mod]] = self._get_reversed_mod_conflicts(mods)
-        self.__process_file_overrides(
-            file_overrides, file_blacklist, mod_overrides, game, game_folder
-        )
+            mod_overrides: dict[Mod, list[Mod]] = self._get_reversed_mod_conflicts(mods)
+            self.__process_file_overrides(
+                file_overrides, file_blacklist, mod_overrides, game, game_folder
+            )
 
         self.log.debug(f"Loaded {len(mods)} mod(s) from instance {instance_name!r}.")
 

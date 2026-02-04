@@ -114,6 +114,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         modname_limit: int = 255,
         file_blacklist: list[str] = [],
         game_folder: Optional[Path] = None,
+        load_conflicts: bool = True,
         update_callback: Optional[UpdateCallback] = None,
     ) -> Instance:
         instance_name: str = instance_data.display_name
@@ -156,7 +157,12 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         )
 
         mods: list[Mod] = self._load_mods(
-            instance_data, game_folder, modname_limit, file_blacklist, update_callback
+            instance_data=instance_data,
+            game_folder=game_folder,
+            modname_limit=modname_limit,
+            file_blacklist=file_blacklist,
+            load_conflicts=load_conflicts,
+            update_callback=update_callback,
         )
 
         update(
@@ -194,6 +200,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         game_folder: Path,
         modname_limit: int = 255,
         file_blacklist: list[str] = [],
+        load_conflicts: bool = True,
         update_callback: Optional[UpdateCallback] = None,
     ) -> list[Mod]:
         instance_name: str = instance_data.display_name
@@ -276,7 +283,6 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                     else Mod.Type.Regular
                 ),
             )
-            mod.files  # build cache for mod files
             mods.append(mod)
 
         # Load overwrite folder as mod
@@ -293,17 +299,17 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                 enabled=True,
                 mod_type=Mod.Type.Overwrite,
             )
-            overwrite_mod.files  # build cache for mod files
             mods.append(overwrite_mod)
 
-        update(
-            update_callback,
-            ProgressUpdate(
-                status_text=self.tr("Processing mod conflicts..."), maximum=0
-            ),
-        )
+        if load_conflicts:
+            update(
+                update_callback,
+                ProgressUpdate(
+                    status_text=self.tr("Processing mod conflicts..."), maximum=0
+                ),
+            )
 
-        self.__process_conflicts(mods, file_blacklist, update_callback)
+            self.__process_conflicts(mods, file_blacklist, update_callback)
 
         self.log.info(
             f"Loaded {len(mods)} mod(s) from {instance_name} > {profile_name}."

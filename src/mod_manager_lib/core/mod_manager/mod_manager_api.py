@@ -86,6 +86,7 @@ class ModManagerApi[I: InstanceInfo](QObject):
         modname_limit: int = 255,
         file_blacklist: list[str] = [],
         game_folder: Optional[Path] = None,
+        load_conflicts: bool = True,
         update_callback: Optional[UpdateCallback] = None,
     ) -> Instance:
         """
@@ -96,6 +97,9 @@ class ModManagerApi[I: InstanceInfo](QObject):
             modname_limit (int, optional): A character limit for mod names. Defaults to 255.
             file_blacklist (list[str], optional): A list of files to ignore.
             game_folder (Optional[Path], optional): The game folder of the instance.
+            load_conflicts (bool, optional):
+                Whether to index the mod list and load all mod and file conflicts.
+                Defaults to True.
             update_callback (Optional[UpdateCallback], optional):
                 Optional update callback for progress updates. Defaults to None.
 
@@ -116,6 +120,7 @@ class ModManagerApi[I: InstanceInfo](QObject):
         game_folder: Path,
         modname_limit: int = 255,
         file_blacklist: list[str] = [],
+        load_conflicts: bool = True,
         update_callback: Optional[UpdateCallback] = None,
     ) -> list[Mod]:
         """
@@ -126,6 +131,9 @@ class ModManagerApi[I: InstanceInfo](QObject):
             game_folder (Path): The game folder of the instance.
             modname_limit (int, optional): A character limit for mod names. Defaults to 255.
             file_blacklist (list[str], optional): A list of files to ignore.
+            load_conflicts (bool, optional):
+                Whether to index the mod list and load all mod and file conflicts.
+                Defaults to True.
             update_callback (Optional[UpdateCallback], optional):
                 Optional update callback for progress updates. Defaults to None.
 

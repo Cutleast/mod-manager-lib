@@ -93,7 +93,7 @@ class Mod(BaseModel):
     @property
     def files(self) -> list[Path]:
         """
-        List of files.
+        List of files. The list is built lazily and then cached.
         """
 
         return list(
@@ -103,7 +103,7 @@ class Mod(BaseModel):
     @property
     def file_objs(self) -> list[File]:
         """
-        List of file objects.
+        List of file objects. The list is built lazily and then cached.
         """
 
         return Mod.__get_files(self.path)
@@ -141,7 +141,7 @@ class Mod(BaseModel):
     @property
     def size(self) -> int:
         """
-        Total size of all files.
+        Total size of all files. The size is calculated lazily and then cached.
         """
 
         return Mod.__get_size(self.path)
