@@ -1038,6 +1038,31 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
 
         return sorted([prof.name for prof in prof_dir.iterdir() if prof.is_dir()])
 
+    @staticmethod
+    def get_last_active_profile(mo2_ini_path: Path) -> Optional[str]:
+        """
+        Gets the name of the last active profile in the specified MO2 instance.
+
+        Args:
+            mo2_ini_path (Path): Path to the ModOrganizer.ini file of the instance.
+
+        Returns:
+            Optional[str]: Name of the last active profile.
+        """
+
+        ini_file = INIFile(mo2_ini_path)
+        ini_data: dict[str, Any] = ini_file.load_file()
+
+        general: dict[str, Any] = ini_data["General"]
+        if "selected_profile" not in general:
+            return
+
+        profile_name: Optional[str] = general["selected_profile"]
+        if profile_name is not None:
+            profile_name = ModOrganizer.BYTE_ARRAY_PATTERN.sub(r"\1", profile_name)
+
+        return profile_name
+
     def detect_global_instances(self) -> bool:
         """
         Checks for global instances at AppData\\Local\\ModOrganizer.

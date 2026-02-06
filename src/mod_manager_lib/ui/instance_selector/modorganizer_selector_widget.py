@@ -3,7 +3,7 @@ Copyright (c) Cutleast
 """
 
 from pathlib import Path
-from typing import override
+from typing import Optional, override
 
 from cutleast_core_lib.core.utilities.env_resolver import resolve
 from cutleast_core_lib.ui.widgets.browse_edit import BrowseLineEdit
@@ -112,6 +112,13 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo, ModOrganize
             self.__profile_dropdown.addItems(
                 self._api.get_profile_names(instance_path / "ModOrganizer.ini")
             )
+
+            profile_name: Optional[str] = ModOrganizer.get_last_active_profile(
+                mo2_ini_path
+            )
+            if profile_name is not None:
+                self.__profile_dropdown.setCurrentText(profile_name)
+
         self.__profile_dropdown.setEnabled(self.__profile_dropdown.count() > 0)
         self.changed.emit()
 

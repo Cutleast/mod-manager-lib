@@ -10,9 +10,6 @@ from cutleast_core_lib.core.utilities.env_resolver import resolve
 from cutleast_core_lib.test.utils import Utils
 from cutleast_core_lib.ui.widgets.browse_edit import BrowseLineEdit
 from cutleast_core_lib.ui.widgets.placeholder_dropdown import PlaceholderDropdown
-from pyfakefs.fake_filesystem import FakeFilesystem
-from pytestqt.qtbot import QtBot
-
 from mod_manager_lib.core.game_service import GameService
 from mod_manager_lib.core.mod_manager.modorganizer.mo2_instance_info import (
     MO2InstanceInfo,
@@ -21,6 +18,8 @@ from mod_manager_lib.core.mod_manager.modorganizer.modorganizer import ModOrgani
 from mod_manager_lib.ui.instance_selector.modorganizer_selector_widget import (
     ModOrganizerSelectorWidget,
 )
+from pyfakefs.fake_filesystem import FakeFilesystem
+from pytestqt.qtbot import QtBot
 
 
 class TestModOrganizerSelectorWidget(BaseTest):
@@ -124,7 +123,8 @@ class TestModOrganizerSelectorWidget(BaseTest):
         assert profile_dropdown.count() == 2
         assert profile_dropdown.itemText(0) == "Default"
         assert profile_dropdown.itemText(1) == "TestProfile"
-        assert not widget.validate()
+        assert profile_dropdown.currentText() == "Default"
+        assert widget.validate()
 
         # when
         with qtbot.waitSignal(widget.changed):
@@ -195,7 +195,8 @@ class TestModOrganizerSelectorWidget(BaseTest):
         assert profile_dropdown.count() == 2
         assert profile_dropdown.itemText(0) == "Default"
         assert profile_dropdown.itemText(1) == "TestProfile"
-        assert not widget.validate()
+        assert profile_dropdown.currentText() == "Default"
+        assert widget.validate()
 
         # when
         with qtbot.waitSignal(widget.changed):
