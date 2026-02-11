@@ -178,11 +178,25 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             instance_data, mods, game_folder, file_blacklist, update_callback
         )
 
+        last_tool_index: Optional[str] = mo2_ini_data.get("Widgets", {}).get(
+            "MainWindow_executablesListBox_index", None
+        )
+        last_tool: Optional[Tool] = None
+        if last_tool_index is not None and last_tool_index.isnumeric():
+            try:
+                last_tool = tools[
+                    # -1 because of the first item "edit"
+                    int(last_tool_index) - 1
+                ]
+            except IndexError:
+                pass
+
         instance = Instance(
             display_name=f"{instance_name} > {profile_name}",
             game_folder=game_folder,
             mods=mods,
             tools=tools,
+            last_tool=last_tool,
             order_matters=True,
         )
 
