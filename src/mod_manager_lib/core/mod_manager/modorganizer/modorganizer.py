@@ -767,23 +767,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             # Create and write metadata to meta.ini
             # if the mod doesn't already have one
             if regular_deployment and Path("meta.ini") not in mod.files:
-                meta_ini_file = INIFile(meta_ini_path)
-                meta_ini_file.data = {
-                    "General": {
-                        "gameName": ModOrganizer.GAME_SHORT_NAME_OVERRIDES.get(
-                            game.short_name, game.short_name
-                        ),
-                        "modid": mod.metadata.mod_id,
-                        "version": mod.metadata.version,
-                        "installationFile": mod.metadata.file_name,
-                    },
-                    "installedFiles": {
-                        "1\\modid": mod.metadata.mod_id,
-                        "size": "1",
-                        "1\\fileid": mod.metadata.file_id,
-                    },
-                }
-                meta_ini_file.save_file()
+                ModOrganizer.write_meta_ini_file(meta_ini_path, mod.metadata, game)
             elif regular_deployment and Path("meta.ini") in mod.files:
                 meta_ini_path.write_bytes((mod.path / "meta.ini").read_bytes())
                 self.log.info("Copied original meta.ini from mod.")
@@ -828,6 +812,37 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             new_mod: Mod = Mod.create_copy(mod)
             new_mod.path = mod_folder
             instance.mods.append(new_mod)
+
+    @staticmethod
+    def write_meta_ini_file(
+        meta_ini_path: Path, metadata: Metadata, game: Game
+    ) -> None:
+        """
+        Writes metadata to a meta.ini file.
+
+        Args:
+            meta_ini_path (Path): Path to the meta.ini file.
+            metadata (Metadata): Mod metadata.
+            game (Game): Game.
+        """
+
+        meta_ini_file = INIFile(meta_ini_path)
+        meta_ini_file.data = {
+            "General": {
+                "gameName": ModOrganizer.GAME_SHORT_NAME_OVERRIDES.get(
+                    game.short_name, game.short_name
+                ),
+                "modid": metadata.mod_id,
+                "version": metadata.version,
+                "installationFile": metadata.file_name,
+            },
+            "installedFiles": {
+                "1\\modid": metadata.mod_id,
+                "size": "1",
+                "1\\fileid": metadata.file_id,
+            },
+        }
+        meta_ini_file.save_file()
 
     @override
     def add_tool(
