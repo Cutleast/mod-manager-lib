@@ -8,8 +8,8 @@ from copy import copy
 from pathlib import Path
 from typing import Any, Optional, override
 
-from cutleast_core_lib.core.archive.archive import Archive
 from cutleast_core_lib.core.downloader import Downloader
+from cutleast_core_lib.core.filesystem.archive import Archive
 from cutleast_core_lib.core.multithreading.progress import (
     ProgressUpdate,
     UpdateCallback,
@@ -710,7 +710,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             ProgressUpdate(status_text=self.tr("Extracting archive..."), maximum=0),
         )
 
-        archive: Archive = Archive.load_archive(downloaded_archive)
+        archive = Archive(downloaded_archive)
         archive.extract_all(dest, full_paths=True)
 
     @override
