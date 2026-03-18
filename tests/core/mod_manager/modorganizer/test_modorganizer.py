@@ -3,10 +3,10 @@ Copyright (c) Cutleast
 """
 
 from pathlib import Path
-from typing import Any
 
 import pytest
 from base_test import BaseTest
+from cutleast_core_lib.core.utilities.ini_file import IniData, IniFile
 from cutleast_core_lib.test.utils import Utils
 from mod_manager_lib.core.game import Game
 from mod_manager_lib.core.game_service import GameService
@@ -14,7 +14,6 @@ from mod_manager_lib.core.instance.instance import Instance
 from mod_manager_lib.core.instance.metadata import Metadata
 from mod_manager_lib.core.instance.mod import Mod
 from mod_manager_lib.core.instance.tool import Tool
-from mod_manager_lib.core.mod_manager.modorganizer.ini_file import INIFile
 from mod_manager_lib.core.mod_manager.modorganizer.mo2_instance_info import (
     MO2InstanceInfo,
 )
@@ -268,9 +267,7 @@ class TestModOrganizer(BaseTest):
         ).is_file()
 
         # when
-        ini_data: dict[str, Any] = INIFile(
-            instance_data.base_folder / "ModOrganizer.ini"
-        ).load_file()
+        ini_data: IniData = IniFile.load(instance_data.base_folder / "ModOrganizer.ini")
 
         # then
         assert ini_data["General"]["gameName"] == game.display_name
