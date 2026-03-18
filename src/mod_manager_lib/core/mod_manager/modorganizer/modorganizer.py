@@ -503,9 +503,9 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
 
         for i in range(1, custom_executables_size + 1):
             try:
-                exe_path = Path(str(custom_executables[f"{i}\\binary"]))
-                raw_args = str(custom_executables[f"{i}\\arguments"] or "")
-                name = str(custom_executables[f"{i}\\title"])
+                exe_path = Path(custom_executables[f"{i}\\binary"])  # pyright: ignore[reportArgumentType]
+                raw_args: str = custom_executables[f"{i}\\arguments"] or ""  # pyright: ignore[reportAssignmentType]
+                name: str = custom_executables[f"{i}\\title"]  # pyright: ignore[reportAssignmentType]
                 raw_working_dir: Optional[IniValue] = custom_executables[
                     f"{i}\\workingDirectory"
                 ]
