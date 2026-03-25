@@ -63,9 +63,6 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
     }
     """Dictionary of overrides for game short names."""
 
-    def __init__(self) -> None:
-        super().__init__()
-
     @override
     def __repr__(self) -> str:
         return "ModOrganizer"
@@ -133,9 +130,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         mo2_ini_data: IniData = IniFile.load(mo2_ini_path)
         raw_game_folder: IniValue = mo2_ini_data.get("General", {}).get("gamePath")
         if isinstance(raw_game_folder, str):
-            raw_game_folder = ModOrganizer.BYTE_ARRAY_PATTERN.sub(
-                r"\1", raw_game_folder
-            )
+            raw_game_folder = ModOrganizer.BYTE_ARRAY_PATTERN.sub(r"\1", raw_game_folder)
             raw_game_folder = raw_game_folder.replace("\\\\", "\\")
             game_folder = Path(raw_game_folder)
         elif game_folder is None:
@@ -238,7 +233,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         if not (mods_dir.is_dir() and prof_dir.is_dir() and modlist_txt_path.is_file()):
             raise InstanceNotFoundError(f"{instance_name} > {profile_name}")
 
-        modnames: list[tuple[str, bool]] = self.__parse_modlist_txt(modlist_txt_path)
+        modnames: list[tuple[str, bool]] = self.parse_modlist_txt(modlist_txt_path)
         unmanaged_modnames: list[str] = [
             f.name
             for f in mods_dir.iterdir()
@@ -268,7 +263,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             mod_meta_path: Path = mod_path / "meta.ini"
             metadata: Metadata
             if mod_meta_path.is_file():
-                metadata = self.__parse_meta_ini(mod_meta_path, instance_data.game)
+                metadata = self.parse_meta_ini(mod_meta_path, instance_data.game)
             else:
                 metadata = Metadata(
                     mod_id=None, file_id=None, version="", file_name="", game_id=""
@@ -329,7 +324,18 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
 
         return mods
 
-    def __parse_meta_ini(self, meta_ini_path: Path, default_game: Game) -> Metadata:
+    def parse_meta_ini(self, meta_ini_path: Path, default_game: Game) -> Metadata:
+        """
+        Parses the meta.ini file of a mod.
+
+        Args:
+            meta_ini_path (Path): Path to the meta.ini file.
+            default_game (Game): The default game if the meta.ini does not specify one.
+
+        Returns:
+            Metadata: Parsed metadata.
+        """
+
         short_name_overrides: dict[str, str] = reverse_dict(
             ModOrganizer.GAME_SHORT_NAME_OVERRIDES
         )
@@ -387,7 +393,17 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         )
 
     @staticmethod
-    def __parse_modlist_txt(modlist_txt_path: Path) -> list[tuple[str, bool]]:
+    def parse_modlist_txt(modlist_txt_path: Path) -> list[tuple[str, bool]]:
+        """
+        Parses the modlist.txt of a profile.
+
+        Args:
+            modlist_txt_path (Path): Path to the modlist.txt file.
+
+        Returns:
+            list[tuple[str, bool]]: List of mod names and their activation state.
+        """
+
         with open(modlist_txt_path, "r", encoding="utf8") as modlist_file:
             lines: list[str] = modlist_file.readlines()
 
@@ -400,7 +416,15 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         return mods
 
     @staticmethod
-    def __dump_modlist_txt(modlist_txt_path: Path, mods: list[Mod]) -> None:
+    def dump_modlist_txt(modlist_txt_path: Path, mods: list[Mod]) -> None:
+        """
+        Dumps the modlist.txt of a profile.
+
+        Args:
+            modlist_txt_path (Path): Path to the modlist.txt file.
+            mods (list[Mod]): List of mods that are installed in the mod instance.
+        """
+
         lines: list[str] = unique(
             [
                 (
@@ -553,14 +577,14 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
 
     @staticmethod
     def process_ini_arguments(raw_args: str) -> list[str]:
-        """
+        r"""
         Processes a raw string of commandline arguments for an executable by splitting
         it into a list of separate arguments.
 
         Examples:
-            `-D:\\"C:\\\\Games\\\\Nolvus Ascension\\\\STOCK GAME\\\\Data\\" -c:\\"C:\\\\Games\\\\Nolvus Ascension\\\\TOOLS\\\\SSE Edit\\\\Cache\\\\\\"`
+            `-D:\"C:\Games\Nolvus Ascension\STOCK GAME\Data\" -c:\"C:\Games\Nolvus Ascension\TOOLS\SSE Edit\Cache\"`
 
-            => `[r'-D:"C:\\Games\\Nolvus Ascension\\STOCK GAME\\Data"', r'-c:"C:\\Games\\Nolvus Ascension\\TOOLS\\SSE Edit\\Cache\\"']`
+            => `[r'-D:"C:\Games\Nolvus Ascension\STOCK GAME\Data"', r'-c:"C:\Games\Nolvus Ascension\TOOLS\SSE Edit\Cache\"']`
 
         Args:
             raw_args (str): Raw string of commandline arguments.
@@ -646,9 +670,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
 
         instance_data.mods_folder.mkdir(parents=True, exist_ok=True)
         instance_data.profiles_folder.mkdir(parents=True, exist_ok=True)
-        os.makedirs(
-            instance_data.profiles_folder / instance_data.profile, exist_ok=True
-        )
+        os.makedirs(instance_data.profiles_folder / instance_data.profile, exist_ok=True)
         os.makedirs(instance_data.base_folder / "downloads", exist_ok=True)
         os.makedirs(instance_data.base_folder / "overwrite", exist_ok=True)
         (instance_data.profiles_folder / instance_data.profile / "modlist.txt").touch()
@@ -814,9 +836,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             instance.mods.append(new_mod)
 
     @staticmethod
-    def write_meta_ini_file(
-        meta_ini_path: Path, metadata: Metadata, game: Game
-    ) -> None:
+    def write_meta_ini_file(meta_ini_path: Path, metadata: Metadata, game: Game) -> None:
         """
         Writes metadata to a meta.ini file.
 
@@ -881,7 +901,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
     @staticmethod
     def _tool_to_ini_data(tool: Tool, index: int, game_folder: Path) -> dict[str, Any]:
         """
-        Creates a INI data section for the specified tool to be written to an
+        Creates an INI data section for the specified tool to be written to an
         instance's ModOrganizer.ini file.
 
         Args:
@@ -940,7 +960,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         modlist_txt_path: Path = (
             instance_data.profiles_folder / instance_data.profile / "modlist.txt"
         )
-        self.__dump_modlist_txt(modlist_txt_path, instance.get_loadorder())
+        self.dump_modlist_txt(modlist_txt_path, instance.get_loadorder())
         self.log.debug(f"Dumped modlist to {str(modlist_txt_path)!r}.")
 
         settings_ini_path: Path = (
@@ -1084,8 +1104,8 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         return ModOrganizer.BYTE_ARRAY_PATTERN.sub(r"\1", profile_name)
 
     def detect_global_instances(self) -> bool:
-        """
-        Checks for global instances at AppData\\Local\\ModOrganizer.
+        r"""
+        Checks for global instances at AppData\Local\ModOrganizer.
 
         Returns:
             bool: Whether there are global MO2 instances.
