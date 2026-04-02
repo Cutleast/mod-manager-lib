@@ -56,6 +56,9 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
     FILE_BLACKLIST: list[str] = ["meta.ini"]
     """List of filenames to ignore when processing mod conflicts."""
 
+    MOD_SEPARATOR_SUFFIX: str = "_separator"
+    """Suffix for the folder name of mod separators."""
+
     appdata_path: Path = resolve(Path("%LOCALAPPDATA%") / "ModOrganizer")
 
     GAME_SHORT_NAME_OVERRIDES: dict[str, str] = {
@@ -278,7 +281,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                 self.log.debug(f"Detected mod using Root Builder plugin: {modname}")
 
             mod = Mod(
-                display_name=modname.removesuffix("_separator"),
+                display_name=modname.removesuffix(ModOrganizer.MOD_SEPARATOR_SUFFIX),
                 path=mod_path,
                 deploy_path=deploy_path,
                 metadata=metadata,
@@ -286,7 +289,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                 enabled=enabled,
                 mod_type=(
                     Mod.Type.Separator
-                    if modname.endswith("_separator")
+                    if modname.endswith(ModOrganizer.MOD_SEPARATOR_SUFFIX)
                     else Mod.Type.Regular
                 ),
             )
@@ -434,7 +437,11 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                         else "-"
                     )
                     + clean_fs_string(mod.display_name)
-                    + ("_separator" if mod.mod_type == Mod.Type.Separator else "")
+                    + (
+                        ModOrganizer.MOD_SEPARATOR_SUFFIX
+                        if mod.mod_type == Mod.Type.Separator
+                        else ""
+                    )
                     + "\n"
                 )
                 for mod in reversed(mods)
@@ -765,7 +772,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         if mod.mod_type in [Mod.Type.Regular, Mod.Type.Separator]:
             mod_name: str = mod.display_name
             if mod.mod_type == Mod.Type.Separator:
-                mod_name += "_separator"
+                mod_name += ModOrganizer.MOD_SEPARATOR_SUFFIX
             mod_folder = instance_data.mods_folder / clean_fs_string(mod_name)
             meta_ini_path: Path = mod_folder / "meta.ini"
             if mod.deploy_path is not None and mod.deploy_path == Path("."):
