@@ -3,10 +3,10 @@ Copyright (c) Cutleast
 """
 
 from pathlib import Path
-from typing import Any
 
 import pytest
 from base_test import BaseTest
+from cutleast_core_lib.core.utilities.ini_file import IniData, IniFile
 from cutleast_core_lib.test.utils import Utils
 from mod_manager_lib.core.game import Game
 from mod_manager_lib.core.game_service import GameService
@@ -14,7 +14,6 @@ from mod_manager_lib.core.instance.instance import Instance
 from mod_manager_lib.core.instance.metadata import Metadata
 from mod_manager_lib.core.instance.mod import Mod
 from mod_manager_lib.core.instance.tool import Tool
-from mod_manager_lib.core.mod_manager.modorganizer.ini_file import INIFile
 from mod_manager_lib.core.mod_manager.modorganizer.mo2_instance_info import (
     MO2InstanceInfo,
 )
@@ -26,14 +25,6 @@ class TestModOrganizer(BaseTest):
     """
     Tests `core.mod_manager.modorganizer.modorganizer.ModOrganizer`.
     """
-
-    @staticmethod
-    def parse_meta_ini_stub(meta_ini_path: Path, default_game: Game) -> Metadata:
-        """
-        Stub for `ModOrganizer.__parse_meta_ini()`.
-        """
-
-        raise NotImplementedError
 
     PARSE_META_INI_DATA: list[tuple[Path, Metadata]] = [
         (
@@ -63,7 +54,7 @@ class TestModOrganizer(BaseTest):
         self, meta_ini_path: Path, expected_metadata: Metadata, data_folder: Path
     ) -> None:
         """
-        Tests `ModOrganizer.__parse_meta_ini()`.
+        Tests `ModOrganizer.parse_meta_ini()`.
         """
 
         # given
@@ -71,9 +62,7 @@ class TestModOrganizer(BaseTest):
         test_meta_ini_path: Path = data_folder / "mod_instance" / "mods" / meta_ini_path
 
         # when
-        metadata: Metadata = Utils.get_private_method(
-            mo2, "parse_meta_ini", TestModOrganizer.parse_meta_ini_stub
-        )(
+        metadata: Metadata = mo2.parse_meta_ini(
             meta_ini_path=test_meta_ini_path,
             default_game=GameService.get_game_by_id("skyrimse"),
         )
@@ -178,9 +167,7 @@ class TestModOrganizer(BaseTest):
             "test_file_3": [mods[4]],
         }
 
-        for i in range(
-            100_000, 500_000
-        ):  # simulate a large mod list with lots of files
+        for i in range(100_000, 500_000):  # simulate a large mod list with lots of files
             file_index[f"test_file_{i}"] = [mods[i // 100_000]]
 
             # add some hidden files
@@ -227,9 +214,7 @@ class TestModOrganizer(BaseTest):
 
         # then
         assert mod1_file_redirects == {}
-        assert mod2_file_redirects == {
-            Path("test_file_2.mohidden"): Path("test_file_2")
-        }
+        assert mod2_file_redirects == {Path("test_file_2.mohidden"): Path("test_file_2")}
 
     def test_create_instance(self, test_fs: FakeFilesystem) -> None:
         """
@@ -268,9 +253,7 @@ class TestModOrganizer(BaseTest):
         ).is_file()
 
         # when
-        ini_data: dict[str, Any] = INIFile(
-            instance_data.base_folder / "ModOrganizer.ini"
-        ).load_file()
+        ini_data: IniData = IniFile.load(instance_data.base_folder / "ModOrganizer.ini")
 
         # then
         assert ini_data["General"]["gameName"] == game.display_name

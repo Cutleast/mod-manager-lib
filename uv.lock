@@ -346,7 +346,7 @@ wheels = [
 [[package]]
 name = "cutleast-core-lib"
 version = "1.3.0"
-source = { git = "https://github.com/Cutleast/cutleast-core-lib#3abca6181921b14623ab3420c60a516217695aae" }
+source = { git = "https://github.com/Cutleast/cutleast-core-lib#c90c2a77a53178c05511519544614712f4457143" }
 dependencies = [
     { name = "comtypes" },
     { name = "darkdetect" },

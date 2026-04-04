@@ -8,15 +8,17 @@ from copy import copy
 from pathlib import Path
 from typing import Any, Optional, override
 
-from cutleast_core_lib.core.archive.archive import Archive
 from cutleast_core_lib.core.downloader import Downloader
+from cutleast_core_lib.core.filesystem.archive import Archive
 from cutleast_core_lib.core.multithreading.progress import (
     ProgressUpdate,
     UpdateCallback,
     update,
 )
 from cutleast_core_lib.core.utilities.env_resolver import resolve
+from cutleast_core_lib.core.utilities.ini_file import IniData, IniFile, IniValue
 from cutleast_core_lib.core.utilities.reverse_dict import reverse_dict
+from cutleast_core_lib.core.utilities.typing_utils import checked_cast
 from cutleast_core_lib.core.utilities.unique import unique
 
 from mod_manager_lib.core.exceptions import GameNotFoundError
@@ -34,7 +36,6 @@ from mod_manager_lib.core.mod_manager.modorganizer.exceptions import (
 from mod_manager_lib.core.utilities.filesystem import clean_fs_string
 
 from ..mod_manager_api import ModManagerApi
-from .ini_file import INIFile
 from .mo2_instance_info import MO2InstanceInfo
 
 
@@ -56,15 +57,15 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
     FILE_BLACKLIST: list[str] = ["meta.ini"]
     """List of filenames to ignore when processing mod conflicts."""
 
-    appdata_path = resolve(Path("%LOCALAPPDATA%") / "ModOrganizer")
+    MOD_SEPARATOR_SUFFIX: str = "_separator"
+    """Suffix for the folder name of mod separators."""
+
+    appdata_path: Path = resolve(Path("%LOCALAPPDATA%") / "ModOrganizer")
 
     GAME_SHORT_NAME_OVERRIDES: dict[str, str] = {
         "EnderalSpecialEdition": "EnderalSE",
     }
     """Dictionary of overrides for game short names."""
-
-    def __init__(self) -> None:
-        super().__init__()
 
     @override
     def __repr__(self) -> str:
@@ -93,13 +94,11 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
 
         if self.appdata_path.is_dir():
             for instance_ini in self.appdata_path.glob("**/ModOrganizer.ini"):
-                ini_file = INIFile(instance_ini)
-                instance_data: dict[str, Any] = ini_file.load_file()
-
+                instance_data: IniData = IniFile.load(instance_ini)
                 if "General" not in instance_data:
                     continue
 
-                instance_game: str = instance_data["General"].get("gameName", "")
+                instance_game: str = str(instance_data["General"].get("gameName", ""))
                 if instance_game.lower() == game.display_name.lower():
                     instances.append(instance_ini.parent.name)
 
@@ -132,9 +131,9 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         if not mo2_ini_path.is_file():
             raise InstanceNotFoundError(f"{instance_name} > {profile_name}")
 
-        mo2_ini_data: dict[str, dict[str, Any]] = INIFile(mo2_ini_path).load_file()
-        raw_game_folder: Optional[str] = mo2_ini_data.get("General", {}).get("gamePath")
-        if raw_game_folder is not None:
+        mo2_ini_data: IniData = IniFile.load(mo2_ini_path)
+        raw_game_folder: IniValue = mo2_ini_data.get("General", {}).get("gamePath")
+        if isinstance(raw_game_folder, str):
             raw_game_folder = ModOrganizer.BYTE_ARRAY_PATTERN.sub(
                 r"\1", raw_game_folder
             )
@@ -178,11 +177,11 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             instance_data, mods, game_folder, file_blacklist, update_callback
         )
 
-        last_tool_index: Optional[str] = mo2_ini_data.get("Widgets", {}).get(
+        last_tool_index: IniValue = mo2_ini_data.get("Widgets", {}).get(
             "MainWindow_executablesListBox_index", None
         )
         last_tool: Optional[Tool] = None
-        if last_tool_index is not None and last_tool_index.isnumeric():
+        if isinstance(last_tool_index, int):
             try:
                 last_tool = tools[
                     # -1 because of the first item "edit"
@@ -240,7 +239,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         if not (mods_dir.is_dir() and prof_dir.is_dir() and modlist_txt_path.is_file()):
             raise InstanceNotFoundError(f"{instance_name} > {profile_name}")
 
-        modnames: list[tuple[str, bool]] = self.__parse_modlist_txt(modlist_txt_path)
+        modnames: list[tuple[str, bool]] = self.parse_modlist_txt(modlist_txt_path)
         unmanaged_modnames: list[str] = [
             f.name
             for f in mods_dir.iterdir()
@@ -270,7 +269,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             mod_meta_path: Path = mod_path / "meta.ini"
             metadata: Metadata
             if mod_meta_path.is_file():
-                metadata = self.__parse_meta_ini(mod_meta_path, instance_data.game)
+                metadata = self.parse_meta_ini(mod_meta_path, instance_data.game)
             else:
                 metadata = Metadata(
                     mod_id=None, file_id=None, version="", file_name="", game_id=""
@@ -285,7 +284,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                 self.log.debug(f"Detected mod using Root Builder plugin: {modname}")
 
             mod = Mod(
-                display_name=modname.removesuffix("_separator"),
+                display_name=modname.removesuffix(ModOrganizer.MOD_SEPARATOR_SUFFIX),
                 path=mod_path,
                 deploy_path=deploy_path,
                 metadata=metadata,
@@ -293,7 +292,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                 enabled=enabled,
                 mod_type=(
                     Mod.Type.Separator
-                    if modname.endswith("_separator")
+                    if modname.endswith(ModOrganizer.MOD_SEPARATOR_SUFFIX)
                     else Mod.Type.Regular
                 ),
             )
@@ -331,15 +330,24 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
 
         return mods
 
-    def __parse_meta_ini(self, meta_ini_path: Path, default_game: Game) -> Metadata:
+    def parse_meta_ini(self, meta_ini_path: Path, default_game: Game) -> Metadata:
+        """
+        Parses the meta.ini file of a mod.
+
+        Args:
+            meta_ini_path (Path): Path to the meta.ini file.
+            default_game (Game): The default game if the meta.ini does not specify one.
+
+        Returns:
+            Metadata: Parsed metadata.
+        """
+
         short_name_overrides: dict[str, str] = reverse_dict(
             ModOrganizer.GAME_SHORT_NAME_OVERRIDES
         )
 
-        ini_file = INIFile(meta_ini_path)
-        meta_ini_data: dict[str, Any] = ini_file.load_file()
-
-        general: Optional[dict[str, Any]] = meta_ini_data.get("General")
+        meta_ini_data: IniData = IniFile.load(meta_ini_path)
+        general: Optional[dict[str, IniValue]] = meta_ini_data.get("General")
         mod_id: Optional[int] = None
         file_id: Optional[int] = None
         version: str = ""
@@ -348,15 +356,15 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         if general is not None:
             try:
                 mod_id = int(general.get("modid") or 0) or None
-                version = general.get("version") or ""
+                version = str(general.get("version") or "")
                 if general.get("installationFile"):
-                    install_file = Path(general["installationFile"] or "").name
+                    install_file = Path(str(general["installationFile"])).name
 
                 while version.endswith(".0") and version.count(".") > 1:
                     version = version.removesuffix(".0")
 
                 try:
-                    game_name: str = general["gameName"]
+                    game_name = str(general["gameName"])
                     game_id = GameService.get_game_by_short_name(
                         short_name_overrides.get(game_name, game_name)
                     ).nexus_id
@@ -391,7 +399,17 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         )
 
     @staticmethod
-    def __parse_modlist_txt(modlist_txt_path: Path) -> list[tuple[str, bool]]:
+    def parse_modlist_txt(modlist_txt_path: Path) -> list[tuple[str, bool]]:
+        """
+        Parses the modlist.txt of a profile.
+
+        Args:
+            modlist_txt_path (Path): Path to the modlist.txt file.
+
+        Returns:
+            list[tuple[str, bool]]: List of mod names and their activation state.
+        """
+
         with open(modlist_txt_path, "r", encoding="utf8") as modlist_file:
             lines: list[str] = modlist_file.readlines()
 
@@ -404,7 +422,15 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         return mods
 
     @staticmethod
-    def __dump_modlist_txt(modlist_txt_path: Path, mods: list[Mod]) -> None:
+    def dump_modlist_txt(modlist_txt_path: Path, mods: list[Mod]) -> None:
+        """
+        Dumps the modlist.txt of a profile.
+
+        Args:
+            modlist_txt_path (Path): Path to the modlist.txt file.
+            mods (list[Mod]): List of mods that are installed in the mod instance.
+        """
+
         lines: list[str] = unique(
             [
                 (
@@ -414,7 +440,11 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                         else "-"
                     )
                     + clean_fs_string(mod.display_name)
-                    + ("_separator" if mod.mod_type == Mod.Type.Separator else "")
+                    + (
+                        ModOrganizer.MOD_SEPARATOR_SUFFIX
+                        if mod.mod_type == Mod.Type.Separator
+                        else ""
+                    )
                     + "\n"
                 )
                 for mod in reversed(mods)
@@ -495,17 +525,57 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         )
 
         mo2_ini_path: Path = instance_data.base_folder / "ModOrganizer.ini"
-        mo2_ini_data: dict[str, dict[str, Any]] = INIFile(mo2_ini_path).load_file()
-        custom_executables: dict[str, Any] = mo2_ini_data.get("customExecutables", {})
-        custom_executables_size = int(custom_executables.get("size", 0))
-        tools: list[Tool] = []
 
+        tools: list[Tool] = self.get_custom_executables(mo2_ini_path)
+        for tool in tools:
+            if tool.working_dir == game_folder:
+                tool.working_dir = None
+
+            mod: Optional[Mod] = ModOrganizer._get_mod_for_path(
+                tool.executable, mods_by_folders
+            )
+            if mod is not None:
+                tool.executable = tool.executable.relative_to(mod.path)
+                tool.mod = mod
+            elif tool.executable.is_relative_to(game_folder):
+                tool.executable = tool.executable.relative_to(game_folder)
+                tool.is_in_game_dir = True
+
+        self.log.info(
+            f"Loaded {len(tools)} tool(s) from {instance_name} > {profile_name}."
+        )
+
+        return tools
+
+    def get_custom_executables(self, mo2_ini_path: Path) -> list[Tool]:
+        """
+        Parses the specified ModOrganizer.ini file and extracts all custom executables.
+        This method does not map them to their mods nor the game folder.
+
+        Args:
+            mo2_ini_path (Path): Path to the ModOrganizer.ini file.
+
+        Returns:
+            list[Tool]: List of executables as-is.
+        """
+
+        mo2_ini_data: IniData = IniFile.load(mo2_ini_path)
+        custom_executables: dict[str, IniValue] = mo2_ini_data.get(
+            "customExecutables", {}
+        )
+        custom_executables_size: IniValue = custom_executables.get("size", 0)
+        if not isinstance(custom_executables_size, int):
+            return []
+
+        tools: list[Tool] = []
         for i in range(1, custom_executables_size + 1):
             try:
-                exe_path = Path(custom_executables[f"{i}\\binary"])
-                raw_args: str = custom_executables[f"{i}\\arguments"] or ""
-                name: str = custom_executables[f"{i}\\title"]
-                raw_working_dir: Optional[str] = custom_executables[
+                exe_path = Path(checked_cast(str, custom_executables[f"{i}\\binary"]))
+                raw_args: str = checked_cast(
+                    str, custom_executables[f"{i}\\arguments"] or ""
+                )
+                name: str = checked_cast(str, custom_executables[f"{i}\\title"])
+                raw_working_dir: Optional[IniValue] = custom_executables[
                     f"{i}\\workingDirectory"
                 ]
             except Exception as ex:
@@ -519,47 +589,31 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                 continue
 
             working_dir: Optional[Path] = (
-                Path(raw_working_dir) if raw_working_dir is not None else None
+                Path(raw_working_dir) if isinstance(raw_working_dir, str) else None
             )
-            if working_dir == game_folder:
-                working_dir = None
-
-            mod: Optional[Mod] = ModOrganizer._get_mod_for_path(
-                exe_path, mods_by_folders
-            )
-            is_in_game_dir: bool = False
-            if mod is not None:
-                exe_path = exe_path.relative_to(mod.path)
-            elif exe_path.is_relative_to(game_folder):
-                exe_path = exe_path.relative_to(game_folder)
-                is_in_game_dir = True
 
             tool = Tool(
                 display_name=name,
-                mod=mod,
+                mod=None,
                 executable=exe_path,
                 commandline_args=ModOrganizer.process_ini_arguments(raw_args),
                 working_dir=working_dir,
-                is_in_game_dir=is_in_game_dir,
+                is_in_game_dir=False,
             )
             tools.append(tool)
-
-        self.log.info(
-            f"Loaded {len(tools)} tool(s) from {instance_name} > {profile_name}."
-        )
 
         return tools
 
     @staticmethod
     def process_ini_arguments(raw_args: str) -> list[str]:
-        """
+        r"""
         Processes a raw string of commandline arguments for an executable by splitting
         it into a list of separate arguments.
 
         Examples:
-            `-D:\\"C:\\\\Games\\\\Nolvus Ascension\\\\STOCK GAME\\\\Data\\" -c:\\"C:\\\\Games\\\\Nolvus Ascension\\\\TOOLS\\\\SSE Edit\\\\Cache\\\\\\"`
+            `-D:\"C:\Games\Nolvus Ascension\STOCK GAME\Data\" -c:\"C:\Games\Nolvus Ascension\TOOLS\SSE Edit\Cache\"`
 
-            => `[r'-D:"C:\\Games\\Nolvus Ascension\\STOCK GAME\\Data"', r'-c:"C:\\Games\\Nolvus Ascension\\TOOLS\\SSE Edit\\Cache\\"']`
+            => `[r'-D:"C:\Games\Nolvus Ascension\STOCK GAME\Data"', r'-c:"C:\Games\Nolvus Ascension\TOOLS\SSE Edit\Cache\"']`
 
         Args:
             raw_args (str): Raw string of commandline arguments.
@@ -624,13 +678,12 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             prof_dir = str(instance_data.profiles_folder).replace("\\", "/")
 
         mo2_ini_path.parent.mkdir(parents=True, exist_ok=True)
-        mo2_ini_file = INIFile(mo2_ini_path)
-        mo2_ini_file.data = {
+        mo2_ini_data: IniData = {
             "General": {
                 "gameName": game.display_name,
                 "selected_profile": "@ByteArray(Default)",
                 "gamePath": str(game_folder).replace("\\", "/"),
-                "first_start": "true",
+                "first_start": True,
             },
             "Settings": {
                 "base_directory": str(instance_data.base_folder).replace("\\", "/"),
@@ -642,7 +695,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                 "style": "Paper Dark.qss",
             },
         }
-        mo2_ini_file.save_file()
+        IniFile.save(mo2_ini_path, mo2_ini_data)
 
         instance_data.mods_folder.mkdir(parents=True, exist_ok=True)
         instance_data.profiles_folder.mkdir(parents=True, exist_ok=True)
@@ -710,7 +763,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             ProgressUpdate(status_text=self.tr("Extracting archive..."), maximum=0),
         )
 
-        archive: Archive = Archive.load_archive(downloaded_archive)
+        archive = Archive(downloaded_archive)
         archive.extract_all(dest, full_paths=True)
 
     @override
@@ -743,7 +796,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         if mod.mod_type in [Mod.Type.Regular, Mod.Type.Separator]:
             mod_name: str = mod.display_name
             if mod.mod_type == Mod.Type.Separator:
-                mod_name += "_separator"
+                mod_name += ModOrganizer.MOD_SEPARATOR_SUFFIX
             mod_folder = instance_data.mods_folder / clean_fs_string(mod_name)
             meta_ini_path: Path = mod_folder / "meta.ini"
             if mod.deploy_path is not None and mod.deploy_path == Path("."):
@@ -767,23 +820,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             # Create and write metadata to meta.ini
             # if the mod doesn't already have one
             if regular_deployment and Path("meta.ini") not in mod.files:
-                meta_ini_file = INIFile(meta_ini_path)
-                meta_ini_file.data = {
-                    "General": {
-                        "gameName": ModOrganizer.GAME_SHORT_NAME_OVERRIDES.get(
-                            game.short_name, game.short_name
-                        ),
-                        "modid": mod.metadata.mod_id,
-                        "version": mod.metadata.version,
-                        "installationFile": mod.metadata.file_name,
-                    },
-                    "installedFiles": {
-                        "1\\modid": mod.metadata.mod_id,
-                        "size": "1",
-                        "1\\fileid": mod.metadata.file_id,
-                    },
-                }
-                meta_ini_file.save_file()
+                ModOrganizer.write_meta_ini_file(meta_ini_path, mod.metadata, game)
             elif regular_deployment and Path("meta.ini") in mod.files:
                 meta_ini_path.write_bytes((mod.path / "meta.ini").read_bytes())
                 self.log.info("Copied original meta.ini from mod.")
@@ -791,7 +828,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         # Process overwrite folder
         elif mod.mod_type == Mod.Type.Overwrite:
             mo2_ini_path: Path = instance_data.base_folder / "ModOrganizer.ini"
-            mod_folder: Path = ModOrganizer.get_overwrite_folder(mo2_ini_path)
+            mod_folder = ModOrganizer.get_overwrite_folder(mo2_ini_path)
 
         else:
             self.log.error(f"Unknown mod type: {mod.mod_type}")
@@ -829,6 +866,36 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             new_mod.path = mod_folder
             instance.mods.append(new_mod)
 
+    @staticmethod
+    def write_meta_ini_file(
+        meta_ini_path: Path, metadata: Metadata, game: Game
+    ) -> None:
+        """
+        Writes metadata to a meta.ini file.
+
+        Args:
+            meta_ini_path (Path): Path to the meta.ini file.
+            metadata (Metadata): Mod metadata.
+            game (Game): Game.
+        """
+
+        meta_ini_data: IniData = {
+            "General": {
+                "gameName": ModOrganizer.GAME_SHORT_NAME_OVERRIDES.get(
+                    game.short_name, game.short_name
+                ),
+                "modid": metadata.mod_id,
+                "version": metadata.version,
+                "installationFile": metadata.file_name,
+            },
+            "installedFiles": {
+                "1\\modid": metadata.mod_id,
+                "size": "1",
+                "1\\fileid": metadata.file_id,
+            },
+        }
+        IniFile.save(meta_ini_path, meta_ini_data)
+
     @override
     def add_tool(
         self,
@@ -846,11 +913,11 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         self.log.info(f"Adding tool {tool.display_name!r}...")
 
         mo2_ini_path: Path = instance_data.base_folder / "ModOrganizer.ini"
-        mo2_ini_file = INIFile(mo2_ini_path)
-        custom_executables: dict[str, Any] = mo2_ini_file.data.setdefault(
+        mo2_ini_data: IniData = IniFile.load(mo2_ini_path)
+        custom_executables: dict[str, IniValue] = mo2_ini_data.setdefault(
             "customExecutables", {"size": 0}
         )
-        new_index = int(custom_executables["size"]) + 1
+        new_index = int(custom_executables["size"]) + 1  # pyright: ignore[reportArgumentType]
 
         new_tool: Tool = copy(tool)
         if new_tool.mod is not None and instance.is_mod_installed(new_tool.mod):
@@ -862,12 +929,12 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         )
         custom_executables["size"] = new_index
 
-        mo2_ini_file.save_file()
+        IniFile.save(mo2_ini_path, mo2_ini_data)
 
     @staticmethod
     def _tool_to_ini_data(tool: Tool, index: int, game_folder: Path) -> dict[str, Any]:
         """
-        Creates a INI data section for the specified tool to be written to an
+        Creates an INI data section for the specified tool to be written to an
         instance's ModOrganizer.ini file.
 
         Args:
@@ -926,20 +993,19 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         modlist_txt_path: Path = (
             instance_data.profiles_folder / instance_data.profile / "modlist.txt"
         )
-        self.__dump_modlist_txt(modlist_txt_path, instance.get_loadorder())
+        self.dump_modlist_txt(modlist_txt_path, instance.get_loadorder())
         self.log.debug(f"Dumped modlist to {str(modlist_txt_path)!r}.")
 
         settings_ini_path: Path = (
             instance_data.profiles_folder / instance_data.profile / "settings.ini"
         )
-        settings_ini = INIFile(settings_ini_path)
-        settings_ini.data = {
+        settings_ini_data: IniData = {
             "General": {
                 "LocalSaves": str(instance.separate_save_games).lower(),
                 "LocalSettings": str(instance.separate_ini_files).lower(),
             }
         }
-        settings_ini.save_file()
+        IniFile.save(settings_ini_path, settings_ini_data)
         self.log.debug(f"Dumped settings to {str(settings_ini_path)!r}.")
 
     @staticmethod
@@ -954,15 +1020,13 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             Path: Path to the mods folder.
         """
 
-        ini_file = INIFile(mo2_ini_path)
-        ini_data: dict[str, Any] = ini_file.load_file()
-
-        settings: dict[str, Any] = ini_data["Settings"]
-        base_dir = Path(settings.get("base_directory", mo2_ini_path.parent))
+        ini_data: IniData = IniFile.load(mo2_ini_path)
+        settings: dict[str, IniValue] = ini_data["Settings"]
+        base_dir = Path(settings.get("base_directory", mo2_ini_path.parent))  # pyright: ignore[reportArgumentType]
 
         mods_dir: Path
         if "mod_directory" in settings:
-            mods_dir = resolve(Path(settings["mod_directory"]), base_dir=str(base_dir))
+            mods_dir = resolve(Path(settings["mod_directory"]), base_dir=str(base_dir))  # pyright: ignore[reportArgumentType]
         else:
             mods_dir = base_dir / "mods"
 
@@ -980,16 +1044,15 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             Path: Path to the profiles folder.
         """
 
-        ini_file = INIFile(mo2_ini_path)
-        ini_data: dict[str, Any] = ini_file.load_file()
-
-        settings: dict[str, Any] = ini_data["Settings"]
-        base_dir = Path(settings.get("base_directory", mo2_ini_path.parent))
+        ini_data: IniData = IniFile.load(mo2_ini_path)
+        settings: dict[str, IniValue] = ini_data["Settings"]
+        base_dir = Path(settings.get("base_directory", mo2_ini_path.parent))  # pyright: ignore[reportArgumentType]
 
         prof_dir: Path
         if "profiles_directory" in settings:
             prof_dir = resolve(
-                Path(settings["profiles_directory"]), base_dir=str(base_dir)
+                Path(settings["profiles_directory"]),  # pyright: ignore[reportArgumentType]
+                base_dir=str(base_dir),
             )
         else:
             prof_dir = base_dir / "profiles"
@@ -1008,16 +1071,15 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             Path: Path to the overwrite folder.
         """
 
-        ini_file = INIFile(mo2_ini_path)
-        ini_data: dict[str, Any] = ini_file.load_file()
-
-        settings: dict[str, Any] = ini_data["Settings"]
-        base_dir = Path(settings.get("base_directory", mo2_ini_path.parent))
+        ini_data: IniData = IniFile.load(mo2_ini_path)
+        settings: dict[str, IniValue] = ini_data["Settings"]
+        base_dir = Path(settings.get("base_directory", mo2_ini_path.parent))  # pyright: ignore[reportArgumentType]
 
         overwrite_dir: Path
         if "overwrite_directory" in settings:
             overwrite_dir = resolve(
-                Path(settings["overwrite_directory"]), base_dir=str(base_dir)
+                Path(settings["overwrite_directory"]),  # pyright: ignore[reportArgumentType]
+                base_dir=str(base_dir),
             )
         else:
             overwrite_dir = base_dir / "overwrite"
@@ -1036,16 +1098,15 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             list[str]: List of profile names.
         """
 
-        ini_file = INIFile(mo2_ini_path)
-        ini_data: dict[str, Any] = ini_file.load_file()
-
-        settings: dict[str, Any] = ini_data["Settings"]
-        base_dir = Path(settings.get("base_directory", mo2_ini_path.parent))
+        ini_data: IniData = IniFile.load(mo2_ini_path)
+        settings: dict[str, IniValue] = ini_data["Settings"]
+        base_dir = Path(settings.get("base_directory", mo2_ini_path.parent))  # pyright: ignore[reportArgumentType]
 
         prof_dir: Path
         if "profiles_directory" in settings:
             prof_dir = resolve(
-                Path(settings["profiles_directory"]), base_dir=str(base_dir)
+                Path(settings["profiles_directory"]),  # pyright: ignore[reportArgumentType]
+                base_dir=str(base_dir),
             )
         else:
             prof_dir = base_dir / "profiles"
@@ -1064,22 +1125,20 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             Optional[str]: Name of the last active profile.
         """
 
-        ini_file = INIFile(mo2_ini_path)
-        ini_data: dict[str, Any] = ini_file.load_file()
-
-        general: dict[str, Any] = ini_data["General"]
+        ini_data: IniData = IniFile.load(mo2_ini_path)
+        general: dict[str, IniValue] = ini_data["General"]
         if "selected_profile" not in general:
             return
 
-        profile_name: Optional[str] = general["selected_profile"]
-        if profile_name is not None:
-            profile_name = ModOrganizer.BYTE_ARRAY_PATTERN.sub(r"\1", profile_name)
+        profile_name: Optional[IniValue] = general["selected_profile"]
+        if not isinstance(profile_name, str):
+            return
 
-        return profile_name
+        return ModOrganizer.BYTE_ARRAY_PATTERN.sub(r"\1", profile_name)
 
     def detect_global_instances(self) -> bool:
-        """
-        Checks for global instances at AppData\\Local\\ModOrganizer.
+        r"""
+        Checks for global instances at AppData\Local\ModOrganizer.
 
         Returns:
             bool: Whether there are global MO2 instances.
