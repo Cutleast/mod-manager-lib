@@ -536,6 +536,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             )
             if mod is not None:
                 tool.executable = tool.executable.relative_to(mod.path)
+                tool.mod = mod
             elif tool.executable.is_relative_to(game_folder):
                 tool.executable = tool.executable.relative_to(game_folder)
                 tool.is_in_game_dir = True
