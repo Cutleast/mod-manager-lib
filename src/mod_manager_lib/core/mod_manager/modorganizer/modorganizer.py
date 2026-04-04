@@ -18,6 +18,7 @@ from cutleast_core_lib.core.multithreading.progress import (
 from cutleast_core_lib.core.utilities.env_resolver import resolve
 from cutleast_core_lib.core.utilities.ini_file import IniData, IniFile, IniValue
 from cutleast_core_lib.core.utilities.reverse_dict import reverse_dict
+from cutleast_core_lib.core.utilities.typing_utils import checked_cast
 from cutleast_core_lib.core.utilities.unique import unique
 
 from mod_manager_lib.core.exceptions import GameNotFoundError
@@ -133,7 +134,9 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         mo2_ini_data: IniData = IniFile.load(mo2_ini_path)
         raw_game_folder: IniValue = mo2_ini_data.get("General", {}).get("gamePath")
         if isinstance(raw_game_folder, str):
-            raw_game_folder = ModOrganizer.BYTE_ARRAY_PATTERN.sub(r"\1", raw_game_folder)
+            raw_game_folder = ModOrganizer.BYTE_ARRAY_PATTERN.sub(
+                r"\1", raw_game_folder
+            )
             raw_game_folder = raw_game_folder.replace("\\\\", "\\")
             game_folder = Path(raw_game_folder)
         elif game_folder is None:
@@ -522,6 +525,39 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         )
 
         mo2_ini_path: Path = instance_data.base_folder / "ModOrganizer.ini"
+
+        tools: list[Tool] = self.get_custom_executables(mo2_ini_path)
+        for tool in tools:
+            if tool.working_dir == game_folder:
+                tool.working_dir = None
+
+            mod: Optional[Mod] = ModOrganizer._get_mod_for_path(
+                tool.executable, mods_by_folders
+            )
+            if mod is not None:
+                tool.executable = tool.executable.relative_to(mod.path)
+            elif tool.executable.is_relative_to(game_folder):
+                tool.executable = tool.executable.relative_to(game_folder)
+                tool.is_in_game_dir = True
+
+        self.log.info(
+            f"Loaded {len(tools)} tool(s) from {instance_name} > {profile_name}."
+        )
+
+        return tools
+
+    def get_custom_executables(self, mo2_ini_path: Path) -> list[Tool]:
+        """
+        Parses the specified ModOrganizer.ini file and extracts all custom executables.
+        This method does not map them to their mods nor the game folder.
+
+        Args:
+            mo2_ini_path (Path): Path to the ModOrganizer.ini file.
+
+        Returns:
+            list[Tool]: List of executables as-is.
+        """
+
         mo2_ini_data: IniData = IniFile.load(mo2_ini_path)
         custom_executables: dict[str, IniValue] = mo2_ini_data.get(
             "customExecutables", {}
@@ -531,12 +567,13 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             return []
 
         tools: list[Tool] = []
-
         for i in range(1, custom_executables_size + 1):
             try:
-                exe_path = Path(custom_executables[f"{i}\\binary"])  # pyright: ignore[reportArgumentType]
-                raw_args: str = custom_executables[f"{i}\\arguments"] or ""  # pyright: ignore[reportAssignmentType]
-                name: str = custom_executables[f"{i}\\title"]  # pyright: ignore[reportAssignmentType]
+                exe_path = Path(checked_cast(str, custom_executables[f"{i}\\binary"]))
+                raw_args: str = checked_cast(
+                    str, custom_executables[f"{i}\\arguments"] or ""
+                )
+                name: str = checked_cast(str, custom_executables[f"{i}\\title"])
                 raw_working_dir: Optional[IniValue] = custom_executables[
                     f"{i}\\workingDirectory"
                 ]
@@ -553,32 +590,16 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             working_dir: Optional[Path] = (
                 Path(raw_working_dir) if isinstance(raw_working_dir, str) else None
             )
-            if working_dir == game_folder:
-                working_dir = None
-
-            mod: Optional[Mod] = ModOrganizer._get_mod_for_path(
-                exe_path, mods_by_folders
-            )
-            is_in_game_dir: bool = False
-            if mod is not None:
-                exe_path = exe_path.relative_to(mod.path)
-            elif exe_path.is_relative_to(game_folder):
-                exe_path = exe_path.relative_to(game_folder)
-                is_in_game_dir = True
 
             tool = Tool(
                 display_name=name,
-                mod=mod,
+                mod=None,
                 executable=exe_path,
                 commandline_args=ModOrganizer.process_ini_arguments(raw_args),
                 working_dir=working_dir,
-                is_in_game_dir=is_in_game_dir,
+                is_in_game_dir=False,
             )
             tools.append(tool)
-
-        self.log.info(
-            f"Loaded {len(tools)} tool(s) from {instance_name} > {profile_name}."
-        )
 
         return tools
 
@@ -677,7 +698,9 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
 
         instance_data.mods_folder.mkdir(parents=True, exist_ok=True)
         instance_data.profiles_folder.mkdir(parents=True, exist_ok=True)
-        os.makedirs(instance_data.profiles_folder / instance_data.profile, exist_ok=True)
+        os.makedirs(
+            instance_data.profiles_folder / instance_data.profile, exist_ok=True
+        )
         os.makedirs(instance_data.base_folder / "downloads", exist_ok=True)
         os.makedirs(instance_data.base_folder / "overwrite", exist_ok=True)
         (instance_data.profiles_folder / instance_data.profile / "modlist.txt").touch()
@@ -843,7 +866,9 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             instance.mods.append(new_mod)
 
     @staticmethod
-    def write_meta_ini_file(meta_ini_path: Path, metadata: Metadata, game: Game) -> None:
+    def write_meta_ini_file(
+        meta_ini_path: Path, metadata: Metadata, game: Game
+    ) -> None:
         """
         Writes metadata to a meta.ini file.
 
