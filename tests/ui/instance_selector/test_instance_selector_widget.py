@@ -47,8 +47,11 @@ class TestInstanceSelectorWidget(BaseTest):
     )
     """Identifier for accessing the private cur_instance_data field."""
 
-    CUR_MOD_MANAGER: tuple[str, type[ModManagerApi]] = "cur_mod_manager", ModManagerApi
-    """Identifier for accessing the private cur_mod_manager field."""
+    CUR_MOD_MANAGER_API: tuple[str, type[ModManagerApi]] = (
+        "cur_mod_manager_api",
+        ModManagerApi,
+    )
+    """Identifier for accessing the private cur_mod_manager_api field."""
 
     MOD_MANAGERS: tuple[str, type[dict[ModManagerApi, BaseSelectorWidget]]] = (
         "mod_managers",
@@ -94,7 +97,7 @@ class TestInstanceSelectorWidget(BaseTest):
             widget, *TestInstanceSelectorWidget.CUR_INSTANCE_DATA
         )
         cur_mod_manager: Optional[ModManagerApi] = Utils.get_private_field_optional(
-            widget, *TestInstanceSelectorWidget.CUR_MOD_MANAGER
+            widget, *TestInstanceSelectorWidget.CUR_MOD_MANAGER_API
         )
         mod_manager_dropdown: EnumPlaceholderDropdown[ModManagerApi] = (
             Utils.get_private_field(
