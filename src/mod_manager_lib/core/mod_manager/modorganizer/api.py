@@ -901,14 +901,14 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             new_tool.mod = instance.get_installed_mod(new_tool.mod)
 
         custom_executables.update(
-            ModOrganizer._tool_to_ini_data(new_tool, new_index, instance.game_folder)
+            ModOrganizer.tool_to_ini_data(new_tool, new_index, instance.game_folder)
         )
         custom_executables["size"] = new_index
 
         IniFile.save(mo2_ini_path, mo2_ini_data)
 
     @staticmethod
-    def _tool_to_ini_data(tool: Tool, index: int, game_folder: Path) -> dict[str, Any]:
+    def tool_to_ini_data(tool: Tool, index: int, game_folder: Path) -> dict[str, Any]:
         """
         Creates an INI data section for the specified tool to be written to an
         instance's ModOrganizer.ini file.
