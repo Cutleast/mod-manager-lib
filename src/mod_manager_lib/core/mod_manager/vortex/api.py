@@ -29,7 +29,7 @@ from mod_manager_lib.core.instance.tool import Tool
 from mod_manager_lib.core.utilities.filesystem import clean_fs_string
 
 from ..exceptions import InstanceNotFoundError
-from ..mod_manager_api import ModManagerApi
+from ..mod_manager import ModManager
 from .exceptions import (
     OverwriteModNotSupportedError,
     VortexIsRunningError,
@@ -39,9 +39,9 @@ from .leveldb import LevelDB
 from .profile_info import ProfileInfo
 
 
-class Vortex(ModManagerApi[ProfileInfo]):
+class Vortex(ModManager[ProfileInfo]):
     """
-    Mod manager class for Vortex.
+    API class for Vortex.
     """
 
     __games: dict[str, Game]
@@ -52,6 +52,7 @@ class Vortex(ModManagerApi[ProfileInfo]):
     db_path: Path
     __level_db: LevelDB
 
+    @override
     def __init__(self) -> None:
         super().__init__()
 
@@ -66,25 +67,6 @@ class Vortex(ModManagerApi[ProfileInfo]):
         self.__games = {g.id: g for g in GameService.get_supported_games()}
 
     @override
-    def __repr__(self) -> str:
-        return "Vortex"
-
-    @override
-    @classmethod
-    def get_id(cls) -> str:
-        return "vortex"
-
-    @override
-    @classmethod
-    def get_display_name(cls) -> str:
-        return "Vortex"
-
-    @override
-    @classmethod
-    def get_icon_name(cls) -> str:
-        return ":/icons/vortex.png"
-
-    @override
     def get_instance_names(self, game: Game) -> list[str]:
         self.log.info(f"Getting profiles for {game.id} from database...")
 
@@ -93,7 +75,9 @@ class Vortex(ModManagerApi[ProfileInfo]):
             return []
 
         try:
-            data = self.__level_db.get_section("persistent###profiles###")
+            data: dict[str, Any] = self.__level_db.get_section(
+                "persistent###profiles###"
+            )
         except plyvel.IOError as ex:
             raise VortexIsRunningError from ex
 
@@ -147,7 +131,7 @@ class Vortex(ModManagerApi[ProfileInfo]):
             ),
         )
 
-        mods: list[Mod] = self._load_mods(
+        mods: list[Mod] = self.load_mods(
             instance_data=instance_data,
             game_folder=game_folder,
             modname_limit=modname_limit,
@@ -155,7 +139,7 @@ class Vortex(ModManagerApi[ProfileInfo]):
             load_conflicts=load_conflicts,
             update_callback=update_callback,
         )
-        tools: list[Tool] = self._load_tools(
+        tools: list[Tool] = self.load_tools(
             instance_data, mods, game_folder, file_blacklist, update_callback
         )
         instance = Instance(
@@ -170,7 +154,7 @@ class Vortex(ModManagerApi[ProfileInfo]):
         return instance
 
     @override
-    def _load_mods(
+    def load_mods(
         self,
         instance_data: ProfileInfo,
         game_folder: Path,
@@ -325,7 +309,7 @@ class Vortex(ModManagerApi[ProfileInfo]):
         if load_conflicts:
             self.__process_conflict_rules(mods, conflict_rules)
 
-            mod_overrides: dict[Mod, list[Mod]] = self._get_reversed_mod_conflicts(mods)
+            mod_overrides: dict[Mod, list[Mod]] = self.get_reversed_mod_conflicts(mods)
             self.__process_file_overrides(
                 file_overrides, file_blacklist, mod_overrides, game, game_folder
             )
@@ -400,7 +384,7 @@ class Vortex(ModManagerApi[ProfileInfo]):
             if mod not in mod_overrides:
                 continue
 
-            overwriting_files: dict[str, list[Mod]] = self._index_modlist(
+            overwriting_files: dict[str, list[Mod]] = self.index_modlist(
                 mod_overrides[mod], file_blacklist
             )
             if not overwriting_files:
@@ -427,7 +411,7 @@ class Vortex(ModManagerApi[ProfileInfo]):
         self.log.info("Processing file overrides successful.")
 
     @override
-    def _load_tools(
+    def load_tools(
         self,
         instance_data: ProfileInfo,
         mods: list[Mod],
@@ -474,7 +458,7 @@ class Vortex(ModManagerApi[ProfileInfo]):
             if working_dir == game_folder:
                 working_dir = None
 
-            mod: Optional[Mod] = Vortex._get_mod_for_path(exe_path, mods_by_folders)
+            mod: Optional[Mod] = Vortex.get_mod_for_path(exe_path, mods_by_folders)
             is_in_game_dir: bool = False
             if mod is not None:
                 exe_path = exe_path.relative_to(mod.path)
@@ -568,7 +552,7 @@ class Vortex(ModManagerApi[ProfileInfo]):
             display_name=instance_data.display_name,
             game_folder=game_folder,
             mods=[],
-            tools=self._load_tools(
+            tools=self.load_tools(
                 instance_data, [], game_folder, update_callback=update_callback
             ),
         )
@@ -646,7 +630,7 @@ class Vortex(ModManagerApi[ProfileInfo]):
             }
             db_mod_data = moddata
 
-            self._install_mod_files(
+            self.install_mod_files(
                 mod=mod,
                 mod_folder=mod_folder,
                 file_redirects=file_redirects,
@@ -859,12 +843,11 @@ class Vortex(ModManagerApi[ProfileInfo]):
             self.log.info(f"Setting file overrides for {mod.display_name!r}...")
             full_mod_name: str = self.__get_unique_file_name(mod).rsplit(".", 1)[0]
             prefix: str = f"persistent###mods###{game.id.lower()}###{full_mod_name}###"
-            mod_data: dict[str, Any] = self.__level_db.get_section(prefix)[
-                "persistent"
-            ]["mods"][game.id.lower()][full_mod_name]
+            mod_data: dict[str, Any] = self.__level_db.get_section(prefix)["persistent"][
+                "mods"
+            ][game.id.lower()][full_mod_name]
             mod_data["fileOverrides"] = [
-                str(game_folder / game.mods_folder / file)
-                for file in mod.file_conflicts
+                str(game_folder / game.mods_folder / file) for file in mod.file_conflicts
             ]
             self.__level_db.set_section(prefix, mod_data)
 

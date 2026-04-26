@@ -3,19 +3,20 @@ Copyright (c) Cutleast
 """
 
 from abc import abstractmethod
-from typing import Generic, TypeVar, override
+from typing import Generic, Optional, TypeVar, cast, override
 
 from PySide6.QtCore import QEvent, QObject, Signal
 from PySide6.QtGui import QWheelEvent
 from PySide6.QtWidgets import QComboBox, QSpinBox, QWidget
 
 from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.mod_manager.apis import ModManagerApi
 from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
 from mod_manager_lib.core.mod_manager.mod_manager import ModManager
-from mod_manager_lib.core.mod_manager.mod_manager_api import ModManagerApi
+from mod_manager_lib.core.mod_manager.service import ModManagerService
 
 I = TypeVar("I", bound=InstanceInfo)  # noqa: E741
-M = TypeVar("M", bound=ModManagerApi)
+M = TypeVar("M", bound=ModManager)
 
 
 class BaseSelectorWidget(QWidget, Generic[I, M]):
@@ -33,24 +34,37 @@ class BaseSelectorWidget(QWidget, Generic[I, M]):
     """This signal gets emitted everytime the selected instance changes."""
 
     valid = Signal(bool)
-    """This signal gets emitted when the validation of the selected instance changes."""
+    """
+    This signal gets emitted when the validation of the selected instance changes.
+    
+    Args:
+        bool: `True` if the selected instance is valid, `False` otherwise.
+    """
 
-    def __init__(self, instance_names: list[str] = []) -> None:
+    def __init__(self, instance_names: Optional[list[str]] = None) -> None:
+        """
+        Args:
+            instance_names (Optional[list[str]], optional):
+                The names of the available mod instances. Defaults to None.
+        """
+
         super().__init__()
 
-        self._api = self.get_mod_manager().get_api()  # pyright: ignore[reportAttributeAccessIssue]
-        self._instance_names = instance_names
+        self._api = cast(
+            M, ModManagerService.get_mod_manager(self.__class__.get_mod_manager())
+        )
+        self._instance_names = instance_names if instance_names is not None else []
 
         self._init_ui()
 
         self.changed.connect(self.__on_change)
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def get_mod_manager() -> ModManager:
+    def get_mod_manager(cls) -> ModManagerApi:
         """
         Returns:
-            ModManager: The mod manager this selector belongs to
+            ModManagerApi: The mod manager this selector belongs to
         """
 
     @abstractmethod

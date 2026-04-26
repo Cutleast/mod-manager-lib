@@ -14,16 +14,16 @@ from mod_manager_lib.core.instance.instance import Instance
 from mod_manager_lib.core.instance.metadata import Metadata
 from mod_manager_lib.core.instance.mod import Mod
 from mod_manager_lib.core.instance.tool import Tool
-from mod_manager_lib.core.mod_manager.modorganizer.mo2_instance_info import (
+from mod_manager_lib.core.mod_manager.modorganizer.api import ModOrganizer
+from mod_manager_lib.core.mod_manager.modorganizer.instance_info import (
     MO2InstanceInfo,
 )
-from mod_manager_lib.core.mod_manager.modorganizer.modorganizer import ModOrganizer
 from pyfakefs.fake_filesystem import FakeFilesystem
 
 
 class TestModOrganizer(BaseTest):
     """
-    Tests `core.mod_manager.modorganizer.modorganizer.ModOrganizer`.
+    Tests `core.mod_manager.modorganizer.api.ModOrganizer`.
     """
 
     PARSE_META_INI_DATA: list[tuple[Path, Metadata]] = [

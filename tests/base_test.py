@@ -14,23 +14,23 @@ import pytest
 from cutleast_core_lib.core.utilities.env_resolver import resolve
 from cutleast_core_lib.test.base_test import BaseTest as CoreBaseTest
 from cutleast_core_lib.test.utils import Utils
-from pyfakefs.fake_filesystem import FakeFilesystem
-from pytest_mock import MockerFixture
-from setup.mock_plyvel import MockPlyvelDB
-
 from mod_manager_lib.core.game_service import GameService
 from mod_manager_lib.core.instance.instance import Instance
 from mod_manager_lib.core.instance.metadata import Metadata
 from mod_manager_lib.core.instance.mod import Mod
 from mod_manager_lib.core.instance.tool import Tool
-from mod_manager_lib.core.mod_manager.mod_manager import ModManager
-from mod_manager_lib.core.mod_manager.modorganizer.mo2_instance_info import (
+from mod_manager_lib.core.mod_manager.apis import ModManagerApi
+from mod_manager_lib.core.mod_manager.modorganizer.api import ModOrganizer
+from mod_manager_lib.core.mod_manager.modorganizer.instance_info import (
     MO2InstanceInfo,
 )
-from mod_manager_lib.core.mod_manager.modorganizer.modorganizer import ModOrganizer
+from mod_manager_lib.core.mod_manager.service import ModManagerService
+from mod_manager_lib.core.mod_manager.vortex.api import Vortex
 from mod_manager_lib.core.mod_manager.vortex.leveldb import LevelDB
 from mod_manager_lib.core.mod_manager.vortex.profile_info import ProfileInfo
-from mod_manager_lib.core.mod_manager.vortex.vortex import Vortex
+from pyfakefs.fake_filesystem import FakeFilesystem
+from pytest_mock import MockerFixture
+from setup.mock_plyvel import MockPlyvelDB
 
 
 class BaseTest(CoreBaseTest):
@@ -125,7 +125,9 @@ class BaseTest(CoreBaseTest):
         fs.set_disk_usage(total_size=1024**3, path="E:")
 
         # Update Vortex path explicitely as it may be the real fs path
-        vortex: Vortex = cast(Vortex, ModManager.Vortex.get_api())
+        vortex: Vortex = cast(
+            Vortex, ModManagerService.get_mod_manager(ModManagerApi.Vortex)
+        )
         vortex.db_path = Path.cwd()  # this path is guaranteed to exist
 
         return fs

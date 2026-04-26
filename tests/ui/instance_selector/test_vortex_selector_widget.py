@@ -6,15 +6,14 @@ import pytest
 from base_test import BaseTest
 from cutleast_core_lib.test.utils import Utils
 from cutleast_core_lib.ui.widgets.placeholder_dropdown import PlaceholderDropdown
-from pytestqt.qtbot import QtBot
-from setup.mock_plyvel import MockPlyvelDB
-
 from mod_manager_lib.core.game_service import GameService
+from mod_manager_lib.core.mod_manager.vortex.api import Vortex
 from mod_manager_lib.core.mod_manager.vortex.profile_info import ProfileInfo
-from mod_manager_lib.core.mod_manager.vortex.vortex import Vortex
 from mod_manager_lib.ui.instance_selector.vortex_selector_widget import (
     VortexSelectorWidget,
 )
+from pytestqt.qtbot import QtBot
+from setup.mock_plyvel import MockPlyvelDB
 
 PROFILE_DROPDOWN: tuple[str, type[PlaceholderDropdown]] = (
     "profile_dropdown",
@@ -29,9 +28,7 @@ class TestVortexSelectorWidget(BaseTest):
     """
 
     @pytest.fixture
-    def widget(
-        self, full_vortex_db: MockPlyvelDB, qtbot: QtBot
-    ) -> VortexSelectorWidget:
+    def widget(self, full_vortex_db: MockPlyvelDB, qtbot: QtBot) -> VortexSelectorWidget:
         """
         Fixture to create and provide a VortexSelectorWidget instance for tests.
         """
