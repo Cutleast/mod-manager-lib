@@ -20,8 +20,8 @@ from PySide6.QtWidgets import (
 )
 
 from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.mod_manager.apis import ModManagerApi
 from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
-from mod_manager_lib.core.mod_manager.mod_manager import ModManager
 
 from . import INSTANCE_WIDGETS
 from .base_creator_widget import BaseCreatorWidget
@@ -35,23 +35,27 @@ class InstanceCreatorWidget(QWidget):
     instance_valid = Signal(bool)
     """
     This signal is emitted when the instance is valid.
+
+    Args:
+        bool: whether the instance is valid.
     """
 
-    __cur_mod_manager: Optional[ModManager] = None
+    __cur_mod_manager: Optional[ModManagerApi] = None
     """
     Selected destination mod manager.
     """
 
-    __mod_managers: dict[ModManager, BaseCreatorWidget]
+    __mod_managers: dict[ModManagerApi, BaseCreatorWidget]
     """
     Maps mod managers to their corresponding instance widgets.
     """
 
     __vlayout: QVBoxLayout
-    __mod_manager_dropdown: EnumPlaceholderDropdown[ModManager]
+    __mod_manager_dropdown: EnumPlaceholderDropdown[ModManagerApi]
     __instance_stack_layout: QStackedLayout
     __placeholder_widget: QWidget
 
+    @override
     def __init__(self) -> None:
         super().__init__()
 
@@ -81,7 +85,7 @@ class InstanceCreatorWidget(QWidget):
         mod_manager_label = QLabel(self.tr("Mod manager:"))
         glayout.addWidget(mod_manager_label, 0, 0)
 
-        self.__mod_manager_dropdown = EnumPlaceholderDropdown(ModManager)
+        self.__mod_manager_dropdown = EnumPlaceholderDropdown(ModManagerApi)
         self.__mod_manager_dropdown.installEventFilter(self)
         glayout.addWidget(self.__mod_manager_dropdown, 0, 1)
 
@@ -95,7 +99,7 @@ class InstanceCreatorWidget(QWidget):
         self.__mod_managers = {}
 
         for instance_widget_type in INSTANCE_WIDGETS:
-            mod_manager: ModManager = instance_widget_type.get_mod_manager()
+            mod_manager: ModManagerApi = instance_widget_type.get_mod_manager()
 
             instance_widget: BaseCreatorWidget = instance_widget_type()
             instance_widget.valid.connect(self.instance_valid.emit)
@@ -103,7 +107,7 @@ class InstanceCreatorWidget(QWidget):
             self.__instance_stack_layout.addWidget(instance_widget)
             self.__mod_managers[mod_manager] = instance_widget
 
-    def __set_cur_mod_manager(self, mod_manager: Optional[ModManager]) -> None:
+    def __set_cur_mod_manager(self, mod_manager: Optional[ModManagerApi]) -> None:
         if mod_manager is not None:
             instance_widget: BaseCreatorWidget = self.__mod_managers[mod_manager]
             self.__instance_stack_layout.setCurrentWidget(instance_widget)
@@ -114,7 +118,7 @@ class InstanceCreatorWidget(QWidget):
 
         self.__cur_mod_manager = mod_manager
 
-    def get_selected_mod_manager(self) -> Optional[ModManager]:
+    def get_selected_mod_manager(self) -> Optional[ModManagerApi]:
         """
         Returns the currently selected mod manager.
 
@@ -155,7 +159,7 @@ class InstanceCreatorWidget(QWidget):
             InstanceData: The customized destination instance data.
         """
 
-        mod_manager: Optional[ModManager] = self.get_selected_mod_manager()
+        mod_manager: Optional[ModManagerApi] = self.get_selected_mod_manager()
 
         if mod_manager is None:
             raise ValueError("No mod manager selected!")

@@ -11,10 +11,10 @@ from cutleast_core_lib.test.utils import Utils
 from cutleast_core_lib.ui.widgets.browse_edit import BrowseLineEdit
 from cutleast_core_lib.ui.widgets.placeholder_dropdown import PlaceholderDropdown
 from mod_manager_lib.core.game_service import GameService
-from mod_manager_lib.core.mod_manager.modorganizer.mo2_instance_info import (
+from mod_manager_lib.core.mod_manager.modorganizer.api import ModOrganizer
+from mod_manager_lib.core.mod_manager.modorganizer.instance_info import (
     MO2InstanceInfo,
 )
-from mod_manager_lib.core.mod_manager.modorganizer.modorganizer import ModOrganizer
 from mod_manager_lib.ui.instance_selector.modorganizer_selector_widget import (
     ModOrganizerSelectorWidget,
 )

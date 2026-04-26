@@ -19,8 +19,8 @@ from PySide6.QtWidgets import (
 )
 
 from mod_manager_lib.core.game import Game
-from mod_manager_lib.core.mod_manager.mod_manager import ModManager
-from mod_manager_lib.core.mod_manager.modorganizer.mo2_instance_info import (
+from mod_manager_lib.core.mod_manager.apis import ModManagerApi
+from mod_manager_lib.core.mod_manager.modorganizer.instance_info import (
     MO2InstanceInfo,
 )
 
@@ -42,9 +42,9 @@ class ModOrganizerCreatorWidget(BaseCreatorWidget[MO2InstanceInfo]):
     __use_root_builder: QCheckBox
 
     @override
-    @staticmethod
-    def get_mod_manager() -> ModManager:
-        return ModManager.ModOrganizer
+    @classmethod
+    def get_mod_manager(cls) -> ModManagerApi:
+        return ModManagerApi.ModOrganizer
 
     @override
     def _init_ui(self) -> None:

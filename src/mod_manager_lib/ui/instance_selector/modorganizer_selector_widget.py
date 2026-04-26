@@ -12,11 +12,11 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFileDialog, QGridLayout, QLabel
 
 from mod_manager_lib.core.game import Game
-from mod_manager_lib.core.mod_manager.mod_manager import ModManager
-from mod_manager_lib.core.mod_manager.modorganizer.mo2_instance_info import (
+from mod_manager_lib.core.mod_manager.apis import ModManagerApi
+from mod_manager_lib.core.mod_manager.modorganizer.api import ModOrganizer
+from mod_manager_lib.core.mod_manager.modorganizer.instance_info import (
     MO2InstanceInfo,
 )
-from mod_manager_lib.core.mod_manager.modorganizer.modorganizer import ModOrganizer
 
 from .base_selector_widget import BaseSelectorWidget
 
@@ -32,9 +32,9 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo, ModOrganize
     __glayout: QGridLayout
 
     @override
-    @staticmethod
-    def get_mod_manager() -> ModManager:
-        return ModManager.ModOrganizer
+    @classmethod
+    def get_mod_manager(cls) -> ModManagerApi:
+        return ModManagerApi.ModOrganizer
 
     @override
     def _init_ui(self) -> None:
@@ -77,9 +77,7 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo, ModOrganize
 
         self.__profile_dropdown = PlaceholderDropdown()
         self.__profile_dropdown.installEventFilter(self)
-        self.__profile_dropdown.currentTextChanged.connect(
-            lambda _: self.changed.emit()
-        )
+        self.__profile_dropdown.currentTextChanged.connect(lambda _: self.changed.emit())
         self.__profile_dropdown.setDisabled(True)
         self.__glayout.addWidget(self.__profile_dropdown, 2, 1)
 

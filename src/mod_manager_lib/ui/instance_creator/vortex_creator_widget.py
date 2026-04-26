@@ -8,9 +8,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGridLayout, QLabel, QLineEdit
 
 from mod_manager_lib.core.game import Game
-from mod_manager_lib.core.mod_manager.mod_manager import ModManager
+from mod_manager_lib.core.mod_manager.apis import ModManagerApi
+from mod_manager_lib.core.mod_manager.vortex.api import Vortex
 from mod_manager_lib.core.mod_manager.vortex.profile_info import ProfileInfo
-from mod_manager_lib.core.mod_manager.vortex.vortex import Vortex
 
 from .base_creator_widget import BaseCreatorWidget
 
@@ -24,9 +24,9 @@ class VortexCreatorWidget(BaseCreatorWidget[ProfileInfo]):
     __profile_name_entry: QLineEdit
 
     @override
-    @staticmethod
-    def get_mod_manager() -> ModManager:
-        return ModManager.Vortex
+    @classmethod
+    def get_mod_manager(cls) -> ModManagerApi:
+        return ModManagerApi.Vortex
 
     @override
     def _init_ui(self) -> None:

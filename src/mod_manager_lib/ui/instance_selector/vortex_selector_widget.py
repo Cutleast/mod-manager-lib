@@ -10,9 +10,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGridLayout, QLabel
 
 from mod_manager_lib.core.game import Game
-from mod_manager_lib.core.mod_manager.mod_manager import ModManager
+from mod_manager_lib.core.mod_manager.apis import ModManagerApi
+from mod_manager_lib.core.mod_manager.vortex.api import Vortex
 from mod_manager_lib.core.mod_manager.vortex.profile_info import ProfileInfo
-from mod_manager_lib.core.mod_manager.vortex.vortex import Vortex
 
 from .base_selector_widget import BaseSelectorWidget
 
@@ -26,9 +26,9 @@ class VortexSelectorWidget(BaseSelectorWidget[ProfileInfo, Vortex]):
     __glayout: QGridLayout
 
     @override
-    @staticmethod
-    def get_mod_manager() -> ModManager:
-        return ModManager.Vortex
+    @classmethod
+    def get_mod_manager(cls) -> ModManagerApi:
+        return ModManagerApi.Vortex
 
     @override
     def _init_ui(self) -> None:
@@ -45,9 +45,7 @@ class VortexSelectorWidget(BaseSelectorWidget[ProfileInfo, Vortex]):
         self.__profile_dropdown = PlaceholderDropdown()
         self.__profile_dropdown.installEventFilter(self)
         self.__profile_dropdown.addItems(self._instance_names)
-        self.__profile_dropdown.currentTextChanged.connect(
-            lambda _: self.changed.emit()
-        )
+        self.__profile_dropdown.currentTextChanged.connect(lambda _: self.changed.emit())
         self.__glayout.addWidget(self.__profile_dropdown, 0, 1)
 
     @override

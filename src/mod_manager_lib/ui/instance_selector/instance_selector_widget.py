@@ -20,8 +20,10 @@ from PySide6.QtWidgets import (
 )
 
 from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.mod_manager.apis import ModManagerApi
 from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
 from mod_manager_lib.core.mod_manager.mod_manager import ModManager
+from mod_manager_lib.core.mod_manager.service import ModManagerService
 
 from . import INSTANCE_WIDGETS
 from .base_selector_widget import BaseSelectorWidget
@@ -55,21 +57,22 @@ class InstanceSelectorWidget(QWidget):
     Currently selected instance data.
     """
 
-    __cur_mod_manager: Optional[ModManager] = None
+    __cur_mod_manager_api: Optional[ModManagerApi] = None
     """
     Currently selected mod manager.
     """
 
-    __mod_managers: dict[ModManager, BaseSelectorWidget]
+    __mod_managers: dict[ModManagerApi, BaseSelectorWidget]
     """
     Maps mod managers to their corresponding instance widgets.
     """
 
     __vlayout: QVBoxLayout
-    __mod_manager_dropdown: EnumPlaceholderDropdown[ModManager]
+    __mod_manager_dropdown: EnumPlaceholderDropdown[ModManagerApi]
     __instance_stack_layout: QStackedLayout
     __placeholder_widget: QWidget
 
+    @override
     def __init__(self) -> None:
         super().__init__()
 
@@ -99,7 +102,7 @@ class InstanceSelectorWidget(QWidget):
         mod_manager_label = QLabel(self.tr("Mod manager:"))
         glayout.addWidget(mod_manager_label, 0, 0)
 
-        self.__mod_manager_dropdown = EnumPlaceholderDropdown(ModManager)
+        self.__mod_manager_dropdown = EnumPlaceholderDropdown(ModManagerApi)
         self.__mod_manager_dropdown.installEventFilter(self)
         glayout.addWidget(self.__mod_manager_dropdown, 0, 1)
 
@@ -113,7 +116,7 @@ class InstanceSelectorWidget(QWidget):
         self.__mod_managers = {}
 
         for instance_widget_type in INSTANCE_WIDGETS:
-            mod_manager: ModManager = instance_widget_type.get_mod_manager()
+            mod_manager: ModManagerApi = instance_widget_type.get_mod_manager()
             instance_widget: BaseSelectorWidget = instance_widget_type()
 
             instance_widget.changed.connect(self.changed.emit)
@@ -134,34 +137,37 @@ class InstanceSelectorWidget(QWidget):
 
         # Reset selected instance
         self.__mod_manager_dropdown.setCurrentValue(None)
-        self.__cur_mod_manager = None
+        self.__cur_mod_manager_api = None
         self.__cur_instance_data = None
 
-    def __set_cur_mod_manager(self, mod_manager: Optional[ModManager]) -> None:
-        if mod_manager is not None:
+    def __set_cur_mod_manager(self, mod_manager_api: Optional[ModManagerApi]) -> None:
+        if mod_manager_api is not None:
             game: Optional[Game] = self.__cur_game
 
             if game is None:
                 raise ValueError("No game selected.")
 
-            instance_widget: BaseSelectorWidget = self.__mod_managers[mod_manager]
-            self.__cur_mod_manager = mod_manager
-            instance_widget.set_instances(
-                mod_manager.get_api().get_instance_names(game)
-            )
+            instance_widget: BaseSelectorWidget = self.__mod_managers[mod_manager_api]
+            self.__cur_mod_manager_api = mod_manager_api
+            mod_manager: ModManager = ModManagerService.get_mod_manager(mod_manager_api)
+            instance_widget.set_instances(mod_manager.get_instance_names(game))
             self.__instance_stack_layout.setCurrentWidget(instance_widget)
             self.__on_valid(instance_widget.validate())
         else:
             self.__instance_stack_layout.setCurrentWidget(self.__placeholder_widget)
-            self.__cur_mod_manager = mod_manager
+            self.__cur_mod_manager_api = mod_manager_api
             self.__on_valid(False)
 
         self.changed.emit()
 
     def __on_valid(self, valid: bool) -> None:
-        if valid and self.__cur_mod_manager is not None and self.__cur_game is not None:
+        if (
+            valid
+            and self.__cur_mod_manager_api is not None
+            and self.__cur_game is not None
+        ):
             instance_widget: BaseSelectorWidget = self.__mod_managers[
-                self.__cur_mod_manager
+                self.__cur_mod_manager_api
             ]
             self.__cur_instance_data = instance_widget.get_instance(self.__cur_game)
         else:
@@ -177,16 +183,16 @@ class InstanceSelectorWidget(QWidget):
             bool: whether the currently selected instance data is valid
         """
 
-        mod_manager: Optional[ModManager] = (
+        mod_manager_api: Optional[ModManagerApi] = (
             self.__mod_manager_dropdown.getCurrentValue()
         )
-        if mod_manager is None:
+        if mod_manager_api is None:
             return False
 
-        instance_widget: BaseSelectorWidget = self.__mod_managers[mod_manager]
+        instance_widget: BaseSelectorWidget = self.__mod_managers[mod_manager_api]
         return instance_widget.validate()
 
-    def get_cur_mod_manager(self) -> Optional[ModManager]:
+    def get_cur_mod_manager(self) -> Optional[ModManagerApi]:
         """
         Returns the currently selected mod manager.
 
@@ -194,7 +200,7 @@ class InstanceSelectorWidget(QWidget):
             Optional[ModManager]: The mod manager or None if no mod manager is selected.
         """
 
-        return self.__cur_mod_manager
+        return self.__cur_mod_manager_api
 
     def get_cur_instance_data(self) -> Optional[InstanceInfo]:
         """
@@ -219,13 +225,13 @@ class InstanceSelectorWidget(QWidget):
 
         if instance_data is not None:
             self.__mod_manager_dropdown.setCurrentValue(instance_data.get_mod_manager())
-            self.__cur_mod_manager = instance_data.get_mod_manager()
+            self.__cur_mod_manager_api = instance_data.get_mod_manager()
             widget: BaseSelectorWidget = self.__mod_managers[
                 instance_data.get_mod_manager()
             ]
             widget.set_instance(instance_data)
         else:
-            self.__cur_mod_manager = None
+            self.__cur_mod_manager_api = None
             for widget in self.__mod_managers.values():
                 widget.reset()
 
