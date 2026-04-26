@@ -8,8 +8,8 @@ from typing import Annotated, Literal, override
 from cutleast_core_lib.core.utilities.pydantic_utils import include_literal_defaults
 from pydantic import Field
 
+from ..apis import ModManagerApi
 from ..instance_info import InstanceInfo
-from ..mod_manager import ModManager
 
 
 @include_literal_defaults
@@ -48,9 +48,9 @@ class MO2InstanceInfo(InstanceInfo, frozen=True):
     game folder.
     """
 
-    mod_manager: Literal[ModManager.ModOrganizer] = ModManager.ModOrganizer
+    mod_manager: Literal[ModManagerApi.ModOrganizer] = ModManagerApi.ModOrganizer
     """Discriminator value for deserialization."""
 
     @override
-    def get_mod_manager(self) -> ModManager:
+    def get_mod_manager(self) -> ModManagerApi:
         return self.mod_manager

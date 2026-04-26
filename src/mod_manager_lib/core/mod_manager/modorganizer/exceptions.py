@@ -10,9 +10,9 @@ from ..exceptions import InstanceCreationError
 
 
 class InvalidGlobalInstancePathError(InstanceCreationError):
-    """
+    r"""
     Exception when the path for a global instance is outside of the
-    `%LOCALAPPDATA%\\ModOrganizer` folder.
+    `%LOCALAPPDATA%\ModOrganizer` folder.
     """
 
     @override
@@ -27,8 +27,8 @@ class InvalidGlobalInstancePathError(InstanceCreationError):
 
 class CannotInstallGlobalMo2Error(InstanceCreationError):
     """
-    Exception when a global instance is selected as destination and
-    the install MO2 checkbox is checked.
+    Exception when a global instance is selected as destination and the install MO2
+    checkbox is checked.
     """
 
     @override

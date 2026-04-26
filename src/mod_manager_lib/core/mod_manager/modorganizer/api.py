@@ -6,7 +6,7 @@ import os
 import re
 from copy import copy
 from pathlib import Path
-from typing import Any, Optional, override
+from typing import Any, Optional, final, override
 
 from cutleast_core_lib.core.downloader import Downloader
 from cutleast_core_lib.core.filesystem.archive import Archive
@@ -35,13 +35,14 @@ from mod_manager_lib.core.mod_manager.modorganizer.exceptions import (
 )
 from mod_manager_lib.core.utilities.filesystem import clean_fs_string
 
-from ..mod_manager_api import ModManagerApi
-from .mo2_instance_info import MO2InstanceInfo
+from ..mod_manager import ModManager
+from .instance_info import MO2InstanceInfo
 
 
-class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
+@final
+class ModOrganizer(ModManager[MO2InstanceInfo]):
     """
-    Mod manager class for Mod Organizer 2.
+    API class for Mod Organizer 2.
     """
 
     # TODO: Make this dynamic instead of a fixed url
@@ -66,25 +67,6 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         "EnderalSpecialEdition": "EnderalSE",
     }
     """Dictionary of overrides for game short names."""
-
-    @override
-    def __repr__(self) -> str:
-        return "ModOrganizer"
-
-    @override
-    @classmethod
-    def get_id(cls) -> str:
-        return "modorganizer"
-
-    @override
-    @classmethod
-    def get_display_name(cls) -> str:
-        return "Mod Organizer 2"
-
-    @override
-    @classmethod
-    def get_icon_name(cls) -> str:
-        return ":/icons/mo2.png"
 
     @override
     def get_instance_names(self, game: Game) -> list[str]:
@@ -134,9 +116,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         mo2_ini_data: IniData = IniFile.load(mo2_ini_path)
         raw_game_folder: IniValue = mo2_ini_data.get("General", {}).get("gamePath")
         if isinstance(raw_game_folder, str):
-            raw_game_folder = ModOrganizer.BYTE_ARRAY_PATTERN.sub(
-                r"\1", raw_game_folder
-            )
+            raw_game_folder = ModOrganizer.BYTE_ARRAY_PATTERN.sub(r"\1", raw_game_folder)
             raw_game_folder = raw_game_folder.replace("\\\\", "\\")
             game_folder = Path(raw_game_folder)
         elif game_folder is None:
@@ -155,7 +135,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             ),
         )
 
-        mods: list[Mod] = self._load_mods(
+        mods: list[Mod] = self.load_mods(
             instance_data=instance_data,
             game_folder=game_folder,
             modname_limit=modname_limit,
@@ -173,7 +153,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             ),
         )
 
-        tools: list[Tool] = self._load_tools(
+        tools: list[Tool] = self.load_tools(
             instance_data, mods, game_folder, file_blacklist, update_callback
         )
 
@@ -207,7 +187,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         return instance
 
     @override
-    def _load_mods(
+    def load_mods(
         self,
         instance_data: MO2InstanceInfo,
         game_folder: Path,
@@ -461,7 +441,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
         file_blacklist: list[str],
         update_callback: Optional[UpdateCallback] = None,
     ) -> None:
-        file_index: dict[str, list[Mod]] = ModOrganizer._index_modlist(
+        file_index: dict[str, list[Mod]] = ModOrganizer.index_modlist(
             mods, file_blacklist
         )
         self.log.debug(f"Modlist has {len(file_index)} file(s) in {len(mods)} mod(s).")
@@ -501,7 +481,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
                 mod.file_conflicts[real_file] = overwriting_mod
 
     @override
-    def _load_tools(
+    def load_tools(
         self,
         instance_data: MO2InstanceInfo,
         mods: list[Mod],
@@ -531,7 +511,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             if tool.working_dir == game_folder:
                 tool.working_dir = None
 
-            mod: Optional[Mod] = ModOrganizer._get_mod_for_path(
+            mod: Optional[Mod] = ModOrganizer.get_mod_for_path(
                 tool.executable, mods_by_folders
             )
             if mod is not None:
@@ -699,9 +679,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
 
         instance_data.mods_folder.mkdir(parents=True, exist_ok=True)
         instance_data.profiles_folder.mkdir(parents=True, exist_ok=True)
-        os.makedirs(
-            instance_data.profiles_folder / instance_data.profile, exist_ok=True
-        )
+        os.makedirs(instance_data.profiles_folder / instance_data.profile, exist_ok=True)
         os.makedirs(instance_data.base_folder / "downloads", exist_ok=True)
         os.makedirs(instance_data.base_folder / "overwrite", exist_ok=True)
         (instance_data.profiles_folder / instance_data.profile / "modlist.txt").touch()
@@ -834,7 +812,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             self.log.error(f"Unknown mod type: {mod.mod_type}")
             return
 
-        self._install_mod_files(
+        self.install_mod_files(
             mod=mod,
             mod_folder=mod_folder,
             file_redirects=file_redirects,
@@ -867,9 +845,7 @@ class ModOrganizer(ModManagerApi[MO2InstanceInfo]):
             instance.mods.append(new_mod)
 
     @staticmethod
-    def write_meta_ini_file(
-        meta_ini_path: Path, metadata: Metadata, game: Game
-    ) -> None:
+    def write_meta_ini_file(meta_ini_path: Path, metadata: Metadata, game: Game) -> None:
         """
         Writes metadata to a meta.ini file.
 

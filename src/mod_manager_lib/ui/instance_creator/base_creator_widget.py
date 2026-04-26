@@ -4,13 +4,14 @@ Copyright (c) Cutleast
 
 import logging
 from abc import abstractmethod
+from typing import override
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget
 
 from mod_manager_lib.core.game import Game
+from mod_manager_lib.core.mod_manager.apis import ModManagerApi
 from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
-from mod_manager_lib.core.mod_manager.mod_manager import ModManager
 
 
 class BaseCreatorWidget[I: InstanceInfo](QWidget):
@@ -21,10 +22,14 @@ class BaseCreatorWidget[I: InstanceInfo](QWidget):
     valid = Signal(bool)
     """
     This signal gets emitted when the validation of the customized instance changes.
+
+    Args:
+        bool: `True` if the customized instance is valid, `False` otherwise.
     """
 
     log: logging.Logger
 
+    @override
     def __init__(self) -> None:
         super().__init__()
 
@@ -32,12 +37,12 @@ class BaseCreatorWidget[I: InstanceInfo](QWidget):
 
         self._init_ui()
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def get_mod_manager() -> ModManager:
+    def get_mod_manager(cls) -> ModManagerApi:
         """
         Returns:
-            ModManager: The mod manager this selector belongs to
+            ModManagerApi: The mod manager this selector belongs to
         """
 
     @abstractmethod

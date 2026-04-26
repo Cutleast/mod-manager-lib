@@ -9,14 +9,10 @@ from cutleast_core_lib.test.utils import Utils
 from cutleast_core_lib.ui.widgets.enum_placeholder_dropdown import (
     EnumPlaceholderDropdown,
 )
-from pyfakefs.fake_filesystem import FakeFilesystem
-from PySide6.QtWidgets import QComboBox, QStackedLayout, QWidget
-from pytestqt.qtbot import QtBot
-
 from mod_manager_lib.core.game_service import GameService
+from mod_manager_lib.core.mod_manager.apis import ModManagerApi
 from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
-from mod_manager_lib.core.mod_manager.mod_manager import ModManager
-from mod_manager_lib.core.mod_manager.modorganizer.mo2_instance_info import (
+from mod_manager_lib.core.mod_manager.modorganizer.instance_info import (
     MO2InstanceInfo,
 )
 from mod_manager_lib.core.mod_manager.vortex.profile_info import ProfileInfo
@@ -30,6 +26,10 @@ from mod_manager_lib.ui.instance_selector.modorganizer_selector_widget import (
 from mod_manager_lib.ui.instance_selector.vortex_selector_widget import (
     VortexSelectorWidget,
 )
+from pyfakefs.fake_filesystem import FakeFilesystem
+from PySide6.QtWidgets import QComboBox, QStackedLayout, QWidget
+from pytestqt.qtbot import QtBot
+
 from tests.base_test import BaseTest
 from tests.setup.mock_plyvel import MockPlyvelDB
 
@@ -47,18 +47,21 @@ class TestInstanceSelectorWidget(BaseTest):
     )
     """Identifier for accessing the private cur_instance_data field."""
 
-    CUR_MOD_MANAGER: tuple[str, type[ModManager]] = "cur_mod_manager", ModManager
-    """Identifier for accessing the private cur_mod_manager field."""
+    CUR_MOD_MANAGER_API: tuple[str, type[ModManagerApi]] = (
+        "cur_mod_manager_api",
+        ModManagerApi,
+    )
+    """Identifier for accessing the private cur_mod_manager_api field."""
 
-    MOD_MANAGERS: tuple[str, type[dict[ModManager, BaseSelectorWidget]]] = (
+    MOD_MANAGERS: tuple[str, type[dict[ModManagerApi, BaseSelectorWidget]]] = (
         "mod_managers",
-        dict[ModManager, BaseSelectorWidget],
+        dict[ModManagerApi, BaseSelectorWidget],
     )
     """Identifier for accessing the private mod_managers field."""
 
-    MOD_MANAGER_DROPDOWN: tuple[str, type[EnumPlaceholderDropdown[ModManager]]] = (
+    MOD_MANAGER_DROPDOWN: tuple[str, type[EnumPlaceholderDropdown[ModManagerApi]]] = (
         "mod_manager_dropdown",
-        EnumPlaceholderDropdown[ModManager],
+        EnumPlaceholderDropdown[ModManagerApi],
     )
     """Identifier for accessing the private mod_manager_dropdown field."""
 
@@ -93,10 +96,10 @@ class TestInstanceSelectorWidget(BaseTest):
         cur_instance_data: Optional[InstanceInfo] = Utils.get_private_field_optional(
             widget, *TestInstanceSelectorWidget.CUR_INSTANCE_DATA
         )
-        cur_mod_manager: Optional[ModManager] = Utils.get_private_field_optional(
-            widget, *TestInstanceSelectorWidget.CUR_MOD_MANAGER
+        cur_mod_manager: Optional[ModManagerApi] = Utils.get_private_field_optional(
+            widget, *TestInstanceSelectorWidget.CUR_MOD_MANAGER_API
         )
-        mod_manager_dropdown: EnumPlaceholderDropdown[ModManager] = (
+        mod_manager_dropdown: EnumPlaceholderDropdown[ModManagerApi] = (
             Utils.get_private_field(
                 widget, *TestInstanceSelectorWidget.MOD_MANAGER_DROPDOWN
             )
@@ -136,7 +139,7 @@ class TestInstanceSelectorWidget(BaseTest):
         """
 
         # given
-        mod_manager_dropdown: EnumPlaceholderDropdown[ModManager] = (
+        mod_manager_dropdown: EnumPlaceholderDropdown[ModManagerApi] = (
             Utils.get_private_field(
                 widget, *TestInstanceSelectorWidget.MOD_MANAGER_DROPDOWN
             )
@@ -147,13 +150,13 @@ class TestInstanceSelectorWidget(BaseTest):
         mo2_selector_widget: ModOrganizerSelectorWidget = cast(
             ModOrganizerSelectorWidget,
             Utils.get_private_field(widget, *TestInstanceSelectorWidget.MOD_MANAGERS)[
-                ModManager.ModOrganizer
+                ModManagerApi.ModOrganizer
             ],
         )
 
         # when
         with qtbot.waitSignals([widget.changed, widget.instance_valid]):
-            mod_manager_dropdown.setCurrentValue(ModManager.ModOrganizer)
+            mod_manager_dropdown.setCurrentValue(ModManagerApi.ModOrganizer)
 
         # then
         assert instance_stack_layout.currentWidget() is mo2_selector_widget
@@ -184,7 +187,7 @@ class TestInstanceSelectorWidget(BaseTest):
         """
 
         # given
-        mod_manager_dropdown: EnumPlaceholderDropdown[ModManager] = (
+        mod_manager_dropdown: EnumPlaceholderDropdown[ModManagerApi] = (
             Utils.get_private_field(
                 widget, *TestInstanceSelectorWidget.MOD_MANAGER_DROPDOWN
             )
@@ -195,13 +198,13 @@ class TestInstanceSelectorWidget(BaseTest):
         mo2_selector_widget: ModOrganizerSelectorWidget = cast(
             ModOrganizerSelectorWidget,
             Utils.get_private_field(widget, *TestInstanceSelectorWidget.MOD_MANAGERS)[
-                ModManager.ModOrganizer
+                ModManagerApi.ModOrganizer
             ],
         )
         vortex_selector_widget: VortexSelectorWidget = cast(
             VortexSelectorWidget,
             Utils.get_private_field(widget, *TestInstanceSelectorWidget.MOD_MANAGERS)[
-                ModManager.Vortex
+                ModManagerApi.Vortex
             ],
         )
         vortex_profile_dropdown: QComboBox = Utils.get_private_field(
@@ -212,14 +215,14 @@ class TestInstanceSelectorWidget(BaseTest):
         widget.set_cur_instance_data(mo2_instance_info)
 
         # then
-        assert mod_manager_dropdown.getCurrentValue() == ModManager.ModOrganizer
+        assert mod_manager_dropdown.getCurrentValue() == ModManagerApi.ModOrganizer
         assert instance_stack_layout.currentWidget() is mo2_selector_widget
         assert widget.validate()
         assert widget.get_cur_instance_data() == mo2_instance_info
 
         # when
         with qtbot.waitSignals([widget.changed, widget.instance_valid]):
-            mod_manager_dropdown.setCurrentValue(ModManager.Vortex)
+            mod_manager_dropdown.setCurrentValue(ModManagerApi.Vortex)
 
         # then
         assert instance_stack_layout.currentWidget() is vortex_selector_widget
@@ -245,7 +248,7 @@ class TestInstanceSelectorWidget(BaseTest):
         """
 
         # given
-        mod_manager_dropdown: EnumPlaceholderDropdown[ModManager] = (
+        mod_manager_dropdown: EnumPlaceholderDropdown[ModManagerApi] = (
             Utils.get_private_field(
                 widget, *TestInstanceSelectorWidget.MOD_MANAGER_DROPDOWN
             )
@@ -256,7 +259,7 @@ class TestInstanceSelectorWidget(BaseTest):
         mo2_selector_widget: ModOrganizerSelectorWidget = cast(
             ModOrganizerSelectorWidget,
             Utils.get_private_field(widget, *TestInstanceSelectorWidget.MOD_MANAGERS)[
-                ModManager.ModOrganizer
+                ModManagerApi.ModOrganizer
             ],
         )
         placeholder_widget: QWidget = Utils.get_private_field(
@@ -291,7 +294,7 @@ class TestInstanceSelectorWidget(BaseTest):
         """
 
         # given
-        mod_manager_dropdown: EnumPlaceholderDropdown[ModManager] = (
+        mod_manager_dropdown: EnumPlaceholderDropdown[ModManagerApi] = (
             Utils.get_private_field(
                 widget, *TestInstanceSelectorWidget.MOD_MANAGER_DROPDOWN
             )
@@ -300,21 +303,21 @@ class TestInstanceSelectorWidget(BaseTest):
         widget.set_cur_instance_data(mo2_instance_info)
 
         # when
-        mod_manager_dropdown.setCurrentValue(ModManager.Vortex)
+        mod_manager_dropdown.setCurrentValue(ModManagerApi.Vortex)
 
         # then
         assert widget.get_cur_instance_data() is None
         assert not widget.validate()
 
         # when
-        mod_manager_dropdown.setCurrentValue(ModManager.ModOrganizer)
+        mod_manager_dropdown.setCurrentValue(ModManagerApi.ModOrganizer)
 
         # then
         assert widget.get_cur_instance_data() is None
         assert not widget.validate()
 
         # when
-        mod_manager_dropdown.setCurrentValue(ModManager.Vortex)
+        mod_manager_dropdown.setCurrentValue(ModManagerApi.Vortex)
 
         # then
         assert widget.get_cur_instance_data() is None

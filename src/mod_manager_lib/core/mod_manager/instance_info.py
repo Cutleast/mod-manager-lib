@@ -11,7 +11,7 @@ from ..game import Game
 from ..game_service import GameService
 
 if TYPE_CHECKING:
-    from .mod_manager import ModManager
+    from .apis import ModManagerApi
 
 
 class InstanceInfo(BaseModel, metaclass=ABCMeta, frozen=True):
@@ -36,7 +36,7 @@ class InstanceInfo(BaseModel, metaclass=ABCMeta, frozen=True):
     """
 
     @abstractmethod
-    def get_mod_manager(self) -> "ModManager":
+    def get_mod_manager(self) -> "ModManagerApi":
         """
         Returns the mod manager that manages this instance.
 

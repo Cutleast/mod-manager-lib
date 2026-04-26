@@ -14,10 +14,10 @@ from mod_manager_lib.core.game_service import GameService
 from mod_manager_lib.core.instance.instance import Instance
 from mod_manager_lib.core.instance.mod import Mod
 from mod_manager_lib.core.instance.tool import Tool
+from mod_manager_lib.core.mod_manager.vortex.api import Vortex
 from mod_manager_lib.core.mod_manager.vortex.exceptions import VortexNotFullySetupError
 from mod_manager_lib.core.mod_manager.vortex.leveldb import LevelDB
 from mod_manager_lib.core.mod_manager.vortex.profile_info import ProfileInfo
-from mod_manager_lib.core.mod_manager.vortex.vortex import Vortex
 from pyfakefs.fake_filesystem import FakeFilesystem
 from setup.mock_plyvel import MockPlyvelDB
 
@@ -32,7 +32,7 @@ def get_staging_folder_stub(game: Game) -> Path:
 
 class TestVortex(BaseTest):
     """
-    Tests `core.mod_manager.vortex.Vortex`.
+    Tests `core.mod_manager.vortex.api.Vortex`.
     """
 
     DATABASE: tuple[str, type[LevelDB]] = ("level_db", LevelDB)
