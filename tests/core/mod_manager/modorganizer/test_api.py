@@ -176,7 +176,7 @@ class TestModOrganizer(BaseTest):
 
         # when
         monkeypatch.setattr(
-            ModOrganizer, "_index_modlist", lambda mods, file_blacklist: file_index
+            ModOrganizer, "index_modlist", lambda mods, file_blacklist: file_index
         )
         Utils.get_private_method(mo2, "process_conflicts", self.process_conflicts_stub)(
             mods, []
