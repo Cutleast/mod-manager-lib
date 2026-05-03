@@ -907,6 +907,8 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
 
         IniFile.save(mo2_ini_path, mo2_ini_data)
 
+        instance.tools.append(new_tool)
+
     @staticmethod
     def tool_to_ini_data(tool: Tool, index: int, game_folder: Path) -> dict[str, Any]:
         """
