@@ -2,7 +2,7 @@
 Copyright (c) Cutleast
 """
 
-from typing import Optional, override
+from typing import Optional, Self, override
 
 from pydantic import BaseModel
 
@@ -41,3 +41,20 @@ class Metadata(BaseModel, frozen=True):
     @override
     def __hash__(self) -> int:
         return hash((self.mod_id, self.file_id, self.version, self.file_name))
+
+    @classmethod
+    def create_blank(cls) -> Self:
+        """
+        Creates a blank Metadata instance with all fields set to None or empty.
+
+        Returns:
+            Metadata: A blank Metadata instance.
+        """
+
+        return cls(
+            mod_id=None,
+            file_id=None,
+            version="",
+            file_name=None,
+            game_id="",
+        )
