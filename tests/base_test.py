@@ -269,11 +269,11 @@ class BaseTest(CoreBaseTest):
         self, mocker: MockerFixture, ready_state_v2_json: Path
     ) -> Generator[MockPlyvelDB, None, None]:
         """
-        Pytest fixture to mock the plyvel.DB classand redirect it to use a sample
+        Pytest fixture to mock the plyvel_next.DB classand redirect it to use a sample
         JSON file.
 
         Yields:
-            Generator[MockPlyvelDB]: The mocked plyvel.DB instance
+            Generator[MockPlyvelDB]: The mocked plyvel_next.DB instance
         """
 
         flat_data: dict[str, str] = LevelDB.flatten_nested_dict(
@@ -283,7 +283,7 @@ class BaseTest(CoreBaseTest):
             {k.encode(): v.encode() for k, v in flat_data.items()}
         )
 
-        magic: MagicMock = mocker.patch("plyvel.DB", return_value=mock_instance)
+        magic: MagicMock = mocker.patch("plyvel_next.DB", return_value=mock_instance)
 
         yield mock_instance
 
@@ -294,11 +294,11 @@ class BaseTest(CoreBaseTest):
         self, mocker: MockerFixture, empty_state_v2_json: Path
     ) -> Generator[MockPlyvelDB, None, None]:
         """
-        Pytest fixture to mock the plyvel.DB class and redirect it to use an empty
+        Pytest fixture to mock the plyvel_next.DB class and redirect it to use an empty
         database.
 
         Yields:
-            Generator[MockPlyvelDB]: The mocked plyvel.DB instance
+            Generator[MockPlyvelDB]: The mocked plyvel_next.DB instance
         """
 
         flat_data: dict[str, str] = LevelDB.flatten_nested_dict(
@@ -308,7 +308,7 @@ class BaseTest(CoreBaseTest):
             {k.encode(): v.encode() for k, v in flat_data.items()}
         )
 
-        magic: MagicMock = mocker.patch("plyvel.DB", return_value=mock_instance)
+        magic: MagicMock = mocker.patch("plyvel_next.DB", return_value=mock_instance)
 
         yield mock_instance
 
@@ -319,11 +319,11 @@ class BaseTest(CoreBaseTest):
         self, mocker: MockerFixture, full_state_v2_json: Path
     ) -> Generator[MockPlyvelDB, None, None]:
         """
-        Pytest fixture to mock the plyvel.DB class and redirect it to use the
+        Pytest fixture to mock the plyvel_next.DB class and redirect it to use the
         database with the test instance.
 
         Yields:
-            Generator[MockPlyvelDB]: The mocked plyvel.DB instance
+            Generator[MockPlyvelDB]: The mocked plyvel_next.DB instance
         """
 
         flat_data: dict[str, str] = LevelDB.flatten_nested_dict(
@@ -333,7 +333,7 @@ class BaseTest(CoreBaseTest):
             {k.encode(): v.encode() for k, v in flat_data.items()}
         )
 
-        magic: MagicMock = mocker.patch("plyvel.DB", return_value=mock_instance)
+        magic: MagicMock = mocker.patch("plyvel_next.DB", return_value=mock_instance)
 
         yield mock_instance
 
