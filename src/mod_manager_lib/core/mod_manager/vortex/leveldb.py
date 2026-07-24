@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import jstyleson as json
-import plyvel as ldb
+import plyvel_next as ldb
 import pyuac
 
 

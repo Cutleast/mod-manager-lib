@@ -11,7 +11,7 @@ from copy import copy
 from pathlib import Path
 from typing import Any, Optional, override
 
-import plyvel
+import plyvel_next as plyvel
 from cutleast_core_lib.core.multithreading.progress import (
     ProgressUpdate,
     UpdateCallback,
