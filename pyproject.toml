@@ -8,7 +8,7 @@ authors = [{ name = "Cutleast", email = "cutleast@gmail.com" }]
 license = { file = "LICENSE" }
 dependencies = [
     "cutleast-core-lib",
-    "plyvel-ci",
+    "plyvel-next",
     "pyuac",
 ]
 
