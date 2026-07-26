@@ -102,7 +102,7 @@ class Vortex(ModManager[ProfileInfo]):
         self,
         instance_data: ProfileInfo,
         modname_limit: int = 255,
-        file_blacklist: list[str] = [],
+        file_blacklist: Optional[list[str]] = None,
         game_folder: Optional[Path] = None,
         load_conflicts: bool = True,
         update_callback: Optional[UpdateCallback] = None,
@@ -159,13 +159,16 @@ class Vortex(ModManager[ProfileInfo]):
         instance_data: ProfileInfo,
         game_folder: Path,
         modname_limit: int = 255,
-        file_blacklist: list[str] = [],
+        file_blacklist: Optional[list[str]] = None,
         load_conflicts: bool = True,
         update_callback: Optional[UpdateCallback] = None,
     ) -> list[Mod]:
         instance_name: str = instance_data.display_name
         profile_id: str = instance_data.id
         game: Game = instance_data.game
+
+        if file_blacklist is None:
+            file_blacklist = []
 
         self.log.debug(f"Loading mods from instance {instance_name!r}...")
 
@@ -416,7 +419,7 @@ class Vortex(ModManager[ProfileInfo]):
         instance_data: ProfileInfo,
         mods: list[Mod],
         game_folder: Path,
-        file_blacklist: list[str] = [],
+        file_blacklist: Optional[list[str]] = None,
         update_callback: Optional[UpdateCallback] = None,
     ) -> list[Tool]:
         self.log.debug("Loading tools from Vortex...")
@@ -566,7 +569,7 @@ class Vortex(ModManager[ProfileInfo]):
         file_redirects: dict[Path, Path],
         use_hardlinks: bool,
         replace: bool,
-        blacklist: list[str] = [],
+        blacklist: Optional[list[str]] = None,
         update_callback: Optional[UpdateCallback] = None,
     ) -> None:
         self.log.info(f"Installing mod {mod.display_name!r}...")
@@ -764,7 +767,7 @@ class Vortex(ModManager[ProfileInfo]):
         instance_data: ProfileInfo,
         use_hardlinks: bool,
         replace: bool,
-        blacklist: list[str] = [],
+        blacklist: Optional[list[str]] = None,
         update_callback: Optional[UpdateCallback] = None,
     ) -> None:
         self.log.info(f"Adding tool {tool.display_name!r}...")
@@ -967,9 +970,9 @@ class Vortex(ModManager[ProfileInfo]):
         """
 
         return (
-            datetime.datetime.fromtimestamp(
-                timestamp, datetime.timezone.utc
-            ).isoformat()[:-6]  # remove timezone, Vortex doesn't want it
+            datetime.datetime.fromtimestamp(timestamp, datetime.UTC).isoformat()[
+                :-6
+            ]  # remove timezone, Vortex doesn't want it
             + "Z"
         )
 

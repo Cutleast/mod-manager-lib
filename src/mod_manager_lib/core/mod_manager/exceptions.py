@@ -24,6 +24,11 @@ class InstanceNotFoundError(ModManagerError):
     """
 
     def __init__(self, instance_name: str) -> None:
+        """
+        Args:
+            instance_name (str): The name of the mod instance that could not be found.
+        """
+
         super().__init__(instance_name)
 
     @override

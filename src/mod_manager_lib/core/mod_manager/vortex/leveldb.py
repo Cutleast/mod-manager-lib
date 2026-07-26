@@ -157,10 +157,9 @@ class LevelDB:
         db_path: Path = self.get_symlink_path()
         self.log.info(f"Saving database to '{db_path}'...")
 
-        with ldb.DB(str(db_path)) as database:
-            with database.write_batch() as batch:
-                for key, value in self.__data.items():
-                    batch.put(key.encode(), value.encode())
+        with ldb.DB(str(db_path)) as database, database.write_batch() as batch:
+            for key, value in self.__data.items():
+                batch.put(key.encode(), value.encode())
 
         self.__changes_pending = False
         self.log.info("Database saved.")
@@ -335,7 +334,7 @@ class LevelDB:
         except ldb.IOError:
             return True
 
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
         return False

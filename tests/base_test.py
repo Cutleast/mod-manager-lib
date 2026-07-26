@@ -6,8 +6,9 @@ import json
 import os
 import shutil
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator, Optional, cast, override
+from typing import Optional, cast, override
 from unittest.mock import MagicMock
 
 import pytest
@@ -233,7 +234,7 @@ class BaseTest(CoreBaseTest):
 
         try:
             mod: Mod = next(
-                (mod for mod in mod_instance.mods if mod.display_name == mod_name)
+                mod for mod in mod_instance.mods if mod.display_name == mod_name
             )
         except StopIteration:
             raise ValueError(f"No mod with name {mod_name} found in mod instance.")
@@ -257,7 +258,7 @@ class BaseTest(CoreBaseTest):
 
         try:
             tool: Tool = next(
-                (tool for tool in mod_instance.tools if tool.display_name == tool_name)
+                tool for tool in mod_instance.tools if tool.display_name == tool_name
             )
         except StopIteration:
             raise ValueError(f"No tool with name {tool_name} found in mod instance.")

@@ -93,7 +93,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         self,
         instance_data: MO2InstanceInfo,
         modname_limit: int = 255,
-        file_blacklist: list[str] = [],
+        file_blacklist: Optional[list[str]] = None,
         game_folder: Optional[Path] = None,
         load_conflicts: bool = True,
         update_callback: Optional[UpdateCallback] = None,
@@ -192,14 +192,17 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         instance_data: MO2InstanceInfo,
         game_folder: Path,
         modname_limit: int = 255,
-        file_blacklist: list[str] = [],
+        file_blacklist: Optional[list[str]] = None,
         load_conflicts: bool = True,
         update_callback: Optional[UpdateCallback] = None,
     ) -> list[Mod]:
         instance_name: str = instance_data.display_name
         profile_name: str = instance_data.profile
 
-        file_blacklist = file_blacklist + ModOrganizer.FILE_BLACKLIST
+        if file_blacklist is None:
+            file_blacklist = ModOrganizer.FILE_BLACKLIST
+        else:
+            file_blacklist = file_blacklist + ModOrganizer.FILE_BLACKLIST
 
         self.log.info(f"Loading mods from {instance_name} > {profile_name}...")
         update(
@@ -363,7 +366,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
                         int(meta_ini_data["installedFiles"].get("1\\fileid") or 0)
                         or None
                     )
-            except Exception as ex:
+            except Exception as ex:  # noqa: BLE001
                 self.log.error(
                     f"Failed to parse meta.ini in '{meta_ini_path.parent}': {ex}"
                 )
@@ -414,11 +417,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         lines: list[str] = unique(
             [
                 (
-                    (
-                        "+"
-                        if mod.enabled and not mod.mod_type == Mod.Type.Separator
-                        else "-"
-                    )
+                    ("+" if mod.enabled and mod.mod_type != Mod.Type.Separator else "-")
                     + clean_fs_string(mod.display_name)
                     + (
                         ModOrganizer.MOD_SEPARATOR_SUFFIX
@@ -486,7 +485,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         instance_data: MO2InstanceInfo,
         mods: list[Mod],
         game_folder: Path,
-        file_blacklist: list[str] = [],
+        file_blacklist: Optional[list[str]] = None,
         update_callback: Optional[UpdateCallback] = None,
     ) -> list[Tool]:
         instance_name: str = instance_data.display_name
@@ -753,7 +752,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         file_redirects: dict[Path, Path],
         use_hardlinks: bool,
         replace: bool,
-        blacklist: list[str] = [],
+        blacklist: Optional[list[str]] = None,
         update_callback: Optional[UpdateCallback] = None,
     ) -> None:
         self.log.info(f"Installing mod {mod.display_name!r}...")
@@ -823,7 +822,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         )
 
         # Append .mohidden suffix to files in mod.file_conflicts
-        for file in mod.file_conflicts.keys():
+        for file in mod.file_conflicts:
             src: Path = mod_folder / file
             dst: Path = src.with_suffix(src.suffix + ".mohidden")
             os.rename(src, dst)
@@ -880,7 +879,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         instance_data: MO2InstanceInfo,
         use_hardlinks: bool,
         replace: bool,
-        blacklist: list[str] = [],
+        blacklist: Optional[list[str]] = None,
         update_callback: Optional[UpdateCallback] = None,
     ) -> None:
         if tool in instance.tools:

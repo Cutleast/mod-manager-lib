@@ -57,7 +57,7 @@ class ModManager[I: InstanceInfo](QObject):
         self,
         instance_data: I,
         modname_limit: int = 255,
-        file_blacklist: list[str] = [],
+        file_blacklist: Optional[list[str]] = None,
         game_folder: Optional[Path] = None,
         load_conflicts: bool = True,
         update_callback: Optional[UpdateCallback] = None,
@@ -67,8 +67,10 @@ class ModManager[I: InstanceInfo](QObject):
 
         Args:
             instance_data (I): The data of the mod instance.
-            modname_limit (int, optional): A character limit for mod names. Defaults to 255.
-            file_blacklist (list[str], optional): A list of files to ignore.
+            modname_limit (int, optional):
+                A character limit for mod names. Defaults to 255.
+            file_blacklist (Optional[list[str]], optional):
+                A list of files to ignore. Defaults to None.
             game_folder (Optional[Path], optional): The game folder of the instance.
             load_conflicts (bool, optional):
                 Whether to index the mod list and load all mod and file conflicts.
@@ -92,7 +94,7 @@ class ModManager[I: InstanceInfo](QObject):
         instance_data: I,
         game_folder: Path,
         modname_limit: int = 255,
-        file_blacklist: list[str] = [],
+        file_blacklist: Optional[list[str]] = None,
         load_conflicts: bool = True,
         update_callback: Optional[UpdateCallback] = None,
     ) -> list[Mod]:
@@ -102,8 +104,10 @@ class ModManager[I: InstanceInfo](QObject):
         Args:
             instance_data (I): The data of the mod instance.
             game_folder (Path): The game folder of the instance.
-            modname_limit (int, optional): A character limit for mod names. Defaults to 255.
-            file_blacklist (list[str], optional): A list of files to ignore.
+            modname_limit (int, optional):
+                A character limit for mod names. Defaults to 255.
+            file_blacklist (Optional[list[str]], optional):
+                A list of files to ignore. Defaults to None.
             load_conflicts (bool, optional):
                 Whether to index the mod list and load all mod and file conflicts.
                 Defaults to True.
@@ -120,7 +124,7 @@ class ModManager[I: InstanceInfo](QObject):
         instance_data: I,
         mods: list[Mod],
         game_folder: Path,
-        file_blacklist: list[str] = [],
+        file_blacklist: Optional[list[str]] = None,
         update_callback: Optional[UpdateCallback] = None,
     ) -> list[Tool]:
         """
@@ -130,7 +134,8 @@ class ModManager[I: InstanceInfo](QObject):
             instance_data (I): The data of the mod instance.
             mods (list[Mod]): The list of already loaded mods.
             game_folder (Path): The game folder of the instance.
-            file_blacklist (list[str], optional): A list of files to ignore.
+            file_blacklist (Optional[list[str]], optional):
+                A list of files to ignore. Defaults to None.
             update_callback (Optional[UpdateCallback], optional):
                 Optional update callback for progress updates. Defaults to None.
 
@@ -259,7 +264,7 @@ class ModManager[I: InstanceInfo](QObject):
         file_redirects: dict[Path, Path],
         use_hardlinks: bool,
         replace: bool,
-        blacklist: list[str] = [],
+        blacklist: Optional[list[str]] = None,
         update_callback: Optional[UpdateCallback] = None,
     ) -> None:
         """
@@ -272,7 +277,8 @@ class ModManager[I: InstanceInfo](QObject):
             file_redirects (dict[Path, Path]): A dict of file redirects.
             use_hardlinks (bool): Whether to use hardlinks if possible.
             replace (bool): Whether to replace existing files.
-            blacklist (list[str], optional): A list of files to not migrate.
+            blacklist (Optional[list[str]], optional):
+                A list of files to not migrate. Defaults to None.
             update_callback (Optional[UpdateCallback], optional):
                 Optional update callback for progress updates. Defaults to None.
         """
@@ -285,7 +291,7 @@ class ModManager[I: InstanceInfo](QObject):
         instance_data: I,
         use_hardlinks: bool,
         replace: bool,
-        blacklist: list[str] = [],
+        blacklist: Optional[list[str]] = None,
         update_callback: Optional[UpdateCallback] = None,
     ) -> None:
         """
@@ -297,7 +303,8 @@ class ModManager[I: InstanceInfo](QObject):
             instance_data (I): The data of the instance above.
             use_hardlinks (bool): Whether to use hardlinks if possible.
             replace (bool): Whether to replace existing files.
-            blacklist (list[str], optional): A list of files to not migrate.
+            blacklist (Optional[list[str]], optional):
+                A list of files to not migrate. Defaults to None.
             update_callback (Optional[UpdateCallback], optional):
                 Optional update callback for progress updates. Defaults to None.
         """
@@ -309,7 +316,7 @@ class ModManager[I: InstanceInfo](QObject):
         file_redirects: dict[Path, Path],
         use_hardlinks: bool,
         replace: bool,
-        blacklist: list[str] = [],
+        blacklist: Optional[list[str]] = None,
         update_callback: Optional[UpdateCallback] = None,
     ) -> None:
         """
@@ -321,10 +328,14 @@ class ModManager[I: InstanceInfo](QObject):
             use_hardlinks (bool): Whether to use hardlinks if possible.
             file_redirects (dict[Path, Path]): A dict of file redirects.
             replace (bool): Whether to replace existing files.
-            blacklist (list[str], optional): A list of files to not migrate.
+            blacklist (Optional[list[str]], optional):
+                A list of files to not migrate. Defaults to None.
             update_callback (Optional[UpdateCallback], optional):
                 Optional update callback for progress updates. Defaults to None.
         """
+
+        if blacklist is None:
+            blacklist = []
 
         files: list[File] = mod.file_objs
         file_count: int = len(files)

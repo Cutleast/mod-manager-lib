@@ -175,7 +175,7 @@ class InstanceCreatorWidget(QWidget):
     def eventFilter(self, source: QObject, event: QEvent) -> bool:
         if (
             event.type() == QEvent.Type.Wheel
-            and (isinstance(source, QComboBox) or isinstance(source, QSpinBox))
+            and (isinstance(source, (QComboBox, QSpinBox)))
             and isinstance(event, QWheelEvent)
         ):
             self.wheelEvent(event)

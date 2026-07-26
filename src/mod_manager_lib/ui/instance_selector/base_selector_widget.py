@@ -15,7 +15,7 @@ from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
 from mod_manager_lib.core.mod_manager.mod_manager import ModManager
 from mod_manager_lib.core.mod_manager.service import ModManagerService
 
-I = TypeVar("I", bound=InstanceInfo)  # noqa: E741
+I = TypeVar("I", bound=InstanceInfo)
 M = TypeVar("M", bound=ModManager)
 
 
@@ -128,7 +128,7 @@ class BaseSelectorWidget(QWidget, Generic[I, M]):
     def eventFilter(self, source: QObject, event: QEvent) -> bool:
         if (
             event.type() == QEvent.Type.Wheel
-            and (isinstance(source, QComboBox) or isinstance(source, QSpinBox))
+            and (isinstance(source, (QComboBox, QSpinBox)))
             and isinstance(event, QWheelEvent)
         ):
             self.wheelEvent(event)

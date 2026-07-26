@@ -7,12 +7,11 @@ if __name__ == "__main__":
 
     from cutleast_core_lib.ui.utilities.icon_provider import IconProvider
     from cutleast_core_lib.ui.utilities.ui_mode import UIMode
-    from PySide6.QtWidgets import QApplication
-
     from mod_manager_lib.core.game_service import GameService
     from mod_manager_lib.ui.instance_selector.instance_selector_widget import (
         InstanceSelectorWidget,
     )
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication([])
 
@@ -22,7 +21,7 @@ if __name__ == "__main__":
     widget = InstanceSelectorWidget()
     widget.set_cur_game(GameService.get_game_by_id("skyrimse"))
 
-    def on_instance_valid(valid: bool) -> None:
+    def on_instance_valid(valid: bool) -> None:  # noqa: D103
         print(f"Instance valid: {valid}")
         if valid:
             print(f"Selected instance: {widget.get_cur_instance_data()}")
