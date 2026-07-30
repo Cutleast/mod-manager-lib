@@ -4,6 +4,7 @@ Copyright (c) Cutleast
 
 import os
 import re
+import time
 from copy import copy
 from pathlib import Path
 from typing import Any, Optional, final, override
@@ -234,6 +235,8 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
                 self.log.warning(f" - {modname}")
         modnames += [(m, False) for m in unmanaged_modnames]
         mods: list[Mod] = []
+        missing_metadata_count: int = 0
+        start_time: float = time.perf_counter()
 
         for m, (modname, enabled) in enumerate(modnames):
             update(
@@ -246,7 +249,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
                     maximum=len(modnames),
                 ),
             )
-            self.log.info(f"Loading mod '{modname}'...")
+            self.log.debug(f"Loading mod '{modname}'...")
 
             mod_path: Path = mods_dir / modname
             mod_meta_path: Path = mod_path / "meta.ini"
@@ -257,7 +260,8 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
                 metadata = Metadata(
                     mod_id=None, file_id=None, version="", file_name="", game_id=""
                 )
-                self.log.warning(f"No Metadata available for '{modname}'!")
+                missing_metadata_count += 1
+                self.log.debug(f"No metadata available for '{modname}'.")
 
             deploy_path: Optional[Path] = None
             if (mod_path / "Root").is_dir():
@@ -307,9 +311,14 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
 
             self.__process_conflicts(mods, file_blacklist, update_callback)
 
+        enabled_mod_count: int = sum(mod.enabled for mod in mods)
+        duration: float = time.perf_counter() - start_time
         self.log.info(
-            f"Loaded {len(mods)} mod(s) from {instance_name} > {profile_name}."
+            f"Loaded {len(mods)} mod(s), {enabled_mod_count} enabled, from "
+            f"{instance_name} > {profile_name} in {duration:.2f}s."
         )
+        if missing_metadata_count:
+            self.log.warning(f"{missing_metadata_count} loaded mod(s) have no metadata.")
 
         return mods
 
