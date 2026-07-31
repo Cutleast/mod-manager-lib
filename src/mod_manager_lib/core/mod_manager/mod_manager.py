@@ -342,8 +342,8 @@ class ModManager[I: InstanceInfo](QObject):
 
         for f, file in enumerate(files):
             if file.path.name.lower() in blacklist:
-                self.log.info(
-                    f"Skipped file due to configured blacklist: {file.path.name!r}"
+                self.log.debug(
+                    f"Skipped file due to configured blacklist: '{file.path.name}'"
                 )
                 continue
 
@@ -364,16 +364,16 @@ class ModManager[I: InstanceInfo](QObject):
             )
 
             if src_path == dst_path:
-                self.log.warning(f"Skipped file due to same path: {str(src_path)!r}")
+                self.log.warning(f"Skipped file due to same path: '{src_path}'")
                 continue
 
             dst_path.parent.mkdir(parents=True, exist_ok=True)
 
             if dst_path.is_file() and replace:
                 dst_path.unlink()
-                self.log.warning(f"Deleted existing file: {str(dst_path)!r}")
+                self.log.warning(f"Deleted existing file: '{dst_path}'")
             elif not replace:
-                self.log.info(f"Skipped existing file: {str(dst_path)!r}")
+                self.log.debug(f"Skipped existing file: '{dst_path}'")
                 continue
 
             if src_path.drive.lower() == dst_path.drive.lower() and use_hardlinks:
@@ -456,8 +456,8 @@ class ModManager[I: InstanceInfo](QObject):
             dst_path: Path = dest_folder / file.name
 
             self.log.info(
-                f"Migrating ini file {file.name!r} from "
-                f"{str(file.parent)!r} to {str(dest_folder)!r}..."
+                f"Migrating ini file '{file.name}' from '{file.parent}' to "
+                f"'{dest_folder}'..."
             )
             update(
                 update_callback,
@@ -472,16 +472,16 @@ class ModManager[I: InstanceInfo](QObject):
             )
 
             if not file.is_file():
-                self.log.warning(f"Skipped not existing file: {str(file)!r}")
+                self.log.warning(f"Skipped not existing file: '{file}'")
                 continue
 
             dest_folder.mkdir(parents=True, exist_ok=True)
 
             if dst_path.is_file() and replace:
                 dst_path.unlink()
-                self.log.warning(f"Deleted existing file: {str(dst_path)!r}")
+                self.log.warning(f"Deleted existing file: '{dst_path}'")
             elif not replace:
-                self.log.info(f"Skipped existing file: {str(dst_path)!r}")
+                self.log.debug(f"Skipped existing file: '{dst_path}'")
                 continue
 
             if file.drive.lower() == dst_path.drive.lower() and use_hardlinks:
@@ -535,8 +535,8 @@ class ModManager[I: InstanceInfo](QObject):
             dst_path: Path = dest_folder / file.name
 
             self.log.info(
-                f"Migrating additional file {file.name!r} from "
-                f"{str(file.parent)!r} to {str(dest_folder)!r}..."
+                f"Migrating additional file '{file.name}' from '{file.parent}' to "
+                f"'{dest_folder}'..."
             )
             update(
                 update_callback,
@@ -554,9 +554,9 @@ class ModManager[I: InstanceInfo](QObject):
 
             if dst_path.is_file() and replace:
                 dst_path.unlink()
-                self.log.warning(f"Deleted existing file: {str(dst_path)!r}")
+                self.log.warning(f"Deleted existing file: '{dst_path}'")
             elif not replace:
-                self.log.info(f"Skipped existing file: {str(dst_path)!r}")
+                self.log.debug(f"Skipped existing file: '{dst_path}'")
                 continue
 
             if file.drive.lower() == dst_path.drive.lower() and use_hardlinks:

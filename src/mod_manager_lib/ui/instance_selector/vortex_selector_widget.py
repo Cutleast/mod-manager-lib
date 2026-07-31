@@ -66,7 +66,7 @@ class VortexSelectorWidget(BaseSelectorWidget[ProfileInfo, Vortex]):
         match: Optional[re.Match] = re.match(r"^(.*) \((.*)\)$", instance_name)
 
         if match is None:
-            raise ValueError(f"Invalid instance name: {instance_name!r}")
+            raise ValueError(f"Invalid instance name: '{instance_name}'")
 
         profile_id: str = match.group(2)
 

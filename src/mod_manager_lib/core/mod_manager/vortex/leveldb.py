@@ -129,7 +129,7 @@ class LevelDB:
         """
 
         db_path: Path = self.get_symlink_path()
-        self.log.info(f"Loading database from '{db_path}' with prefix {prefix!r}...")
+        self.log.info(f"Loading database from '{db_path}' with prefix '{prefix}'...")
 
         raw_data: dict[str, str] = {}
 

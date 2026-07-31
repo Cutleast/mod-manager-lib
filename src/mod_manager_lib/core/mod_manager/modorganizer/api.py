@@ -4,6 +4,7 @@ Copyright (c) Cutleast
 
 import os
 import re
+import time
 from copy import copy
 from pathlib import Path
 from typing import Any, Optional, final, override
@@ -123,8 +124,8 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             raise GameNotFoundError
 
         self.log.info(
-            f"Loading profile {profile_name!r} from instance "
-            f"{instance_name!r} at '{instance_path}'..."
+            f"Loading profile '{profile_name}' from instance '{instance_name}' at "
+            f"'{instance_path}'..."
         )
         update(
             update_callback,
@@ -180,8 +181,8 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         )
 
         self.log.info(
-            f"Loaded {instance_name} > {profile_name} with {len(mods)} mod(s) "
-            f"and {len(instance.tools)} tool(s)."
+            f"Loaded {instance_name} > {profile_name} with {len(mods)} mod(s) and "
+            f"{len(instance.tools)} tool(s)."
         )
 
         return instance
@@ -234,6 +235,8 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
                 self.log.warning(f" - {modname}")
         modnames += [(m, False) for m in unmanaged_modnames]
         mods: list[Mod] = []
+        missing_metadata_count: int = 0
+        start_time: float = time.perf_counter()
 
         for m, (modname, enabled) in enumerate(modnames):
             update(
@@ -246,7 +249,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
                     maximum=len(modnames),
                 ),
             )
-            self.log.info(f"Loading mod '{modname}'...")
+            self.log.debug(f"Loading mod '{modname}'...")
 
             mod_path: Path = mods_dir / modname
             mod_meta_path: Path = mod_path / "meta.ini"
@@ -257,7 +260,8 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
                 metadata = Metadata(
                     mod_id=None, file_id=None, version="", file_name="", game_id=""
                 )
-                self.log.warning(f"No Metadata available for '{modname}'!")
+                missing_metadata_count += 1
+                self.log.debug(f"No metadata available for '{modname}'.")
 
             deploy_path: Optional[Path] = None
             if (mod_path / "Root").is_dir():
@@ -307,9 +311,14 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
 
             self.__process_conflicts(mods, file_blacklist, update_callback)
 
+        enabled_mod_count: int = sum(mod.enabled for mod in mods)
+        duration: float = time.perf_counter() - start_time
         self.log.info(
-            f"Loaded {len(mods)} mod(s) from {instance_name} > {profile_name}."
+            f"Loaded {len(mods)} mod(s) ({enabled_mod_count} enabled) from "
+            f"{instance_name} > {profile_name} in {duration:.2f}s."
         )
+        if missing_metadata_count:
+            self.log.warning(f"{missing_metadata_count} loaded mod(s) have no metadata.")
 
         return mods
 
@@ -628,7 +637,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         game_folder: Path,
         update_callback: Optional[UpdateCallback] = None,
     ) -> Instance:
-        self.log.info(f"Creating instance {instance_data.display_name!r}...")
+        self.log.info(f"Creating instance '{instance_data.display_name}'...")
 
         mo2_ini_path: Path = instance_data.base_folder / "ModOrganizer.ini"
         game: Game = instance_data.game
@@ -699,7 +708,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
     def __download_and_install_mo2(
         self, dest: Path, update_callback: Optional[UpdateCallback] = None
     ) -> None:
-        self.log.info(f"Downloading and installing ModOrganizer to {str(dest)!r}...")
+        self.log.info(f"Downloading and installing ModOrganizer to '{dest}'...")
 
         update(
             update_callback,
@@ -712,7 +721,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         self.__install_mo2(downloaded_archive, dest, update_callback)
 
         downloaded_archive.unlink()
-        self.log.debug(f"Deleted downloaded {str(downloaded_archive)!r}.")
+        self.log.debug(f"Deleted downloaded '{downloaded_archive}'.")
 
         self.log.info("ModOrganizer downloaded and installed successfully.")
 
@@ -755,7 +764,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         blacklist: Optional[list[str]] = None,
         update_callback: Optional[UpdateCallback] = None,
     ) -> None:
-        self.log.info(f"Installing mod {mod.display_name!r}...")
+        self.log.info(f"Installing mod '{mod.display_name}'...")
 
         game: Game
         try:
@@ -790,7 +799,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
 
             if mod_folder.is_dir() and regular_deployment:
                 self.log.warning(
-                    f"Mod {mod.display_name!r} already exists! Merging files..."
+                    f"Mod '{mod.display_name}' already exists! Merging files..."
                 )
             mod_folder.mkdir(parents=True, exist_ok=True)
 
@@ -885,7 +894,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         if tool in instance.tools:
             return
 
-        self.log.info(f"Adding tool {tool.display_name!r}...")
+        self.log.info(f"Adding tool '{tool.display_name}'...")
 
         mo2_ini_path: Path = instance_data.base_folder / "ModOrganizer.ini"
         mo2_ini_data: IniData = IniFile.load(mo2_ini_path)
@@ -971,7 +980,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             instance_data.profiles_folder / instance_data.profile / "modlist.txt"
         )
         self.dump_modlist_txt(modlist_txt_path, instance.get_loadorder())
-        self.log.debug(f"Dumped modlist to {str(modlist_txt_path)!r}.")
+        self.log.debug(f"Dumped modlist to '{modlist_txt_path}'.")
 
         settings_ini_path: Path = (
             instance_data.profiles_folder / instance_data.profile / "settings.ini"
@@ -983,7 +992,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             }
         }
         IniFile.save(settings_ini_path, settings_ini_data)
-        self.log.debug(f"Dumped settings to {str(settings_ini_path)!r}.")
+        self.log.debug(f"Dumped settings to '{settings_ini_path}'.")
 
     @staticmethod
     def get_mods_folder(mo2_ini_path: Path) -> Path:

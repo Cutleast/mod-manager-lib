@@ -51,12 +51,12 @@ def copy_folder(
         file.path.relative_to(src) for file in DirectoryScanner.scan_folder(src)
     ]
 
-    log.info(f"Copying {len(files)} files from {str(src)!r} to {str(dst)!r}...")
+    log.info(f"Copying {len(files)} files from '{src}' to '{dst}'...")
 
     total_size: int = sum((src / file).stat().st_size for file in files)
     current_size: int = 0
     for f, file in enumerate(files):
-        log.debug(f"Copying {str(file)!r}... ({f + 1} / {len(files)})")
+        log.debug(f"Copying '{file}'... ({f + 1} / {len(files)})")
 
         src_file = src / file
         dst_file = dst / file
@@ -65,9 +65,7 @@ def copy_folder(
         copyfile(src_file, dst_file)
 
         current_size += dst_file.stat().st_size
-        update(
-            progress_callback, ProgressUpdate(value=current_size, maximum=total_size)
-        )
+        update(progress_callback, ProgressUpdate(value=current_size, maximum=total_size))
 
     log.info("Copying completed.")
 

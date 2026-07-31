@@ -123,7 +123,7 @@ class Vortex(ModManager[ProfileInfo]):
         elif game_folder is None:
             raise GameNotFoundError
 
-        self.log.info(f"Loading profile {instance_name!r}...")
+        self.log.info(f"Loading profile '{instance_name}'...")
         update(
             update_callback,
             ProgressUpdate(
@@ -147,8 +147,8 @@ class Vortex(ModManager[ProfileInfo]):
         )
 
         self.log.info(
-            f"Loaded profile {instance_name!r} with {len(mods)} mod(s) "
-            f"and {len(instance.tools)} tool(s)."
+            f"Loaded profile '{instance_name}' with {len(mods)} mod(s) and "
+            f"{len(instance.tools)} tool(s)."
         )
 
         return instance
@@ -170,7 +170,7 @@ class Vortex(ModManager[ProfileInfo]):
         if file_blacklist is None:
             file_blacklist = []
 
-        self.log.debug(f"Loading mods from instance {instance_name!r}...")
+        self.log.debug(f"Loading mods from instance '{instance_name}'...")
 
         update(
             update_callback,
@@ -225,7 +225,7 @@ class Vortex(ModManager[ProfileInfo]):
                 ),
             )
 
-            self.log.info(f"Loading mod '{modname}'...")
+            self.log.debug(f"Loading mod '{modname}'...")
 
             moddata = installed_mods[modname]
             mod_meta_data: dict[str, Any] = moddata["attributes"]
@@ -252,8 +252,8 @@ class Vortex(ModManager[ProfileInfo]):
 
             if not mod_path.is_dir():
                 self.log.warning(
-                    f"Failed to load mod files for mod {display_name!r}: "
-                    f"{str(mod_path)!r} does not exist!"
+                    f"Failed to load mod files for mod '{display_name}': '{mod_path}' "
+                    "does not exist!"
                 )
                 continue
 
@@ -279,11 +279,11 @@ class Vortex(ModManager[ProfileInfo]):
                     dl_game_id = self.__games[mod_meta_data["downloadGame"]].nexus_id
                 elif "downloadGame" in mod_meta_data:
                     self.log.warning(
-                        f"Unknown game for mod {display_name!r}: {mod_meta_data['downloadGame']}"
+                        f"Unknown game for mod '{display_name}': {mod_meta_data['downloadGame']}"
                     )
             except Exception as ex:
                 self.log.error(
-                    f"Failed to process metadata for mod {display_name!r}: {ex}",
+                    f"Failed to process metadata for mod '{display_name}': {ex}",
                     exc_info=ex,
                 )
 
@@ -317,7 +317,7 @@ class Vortex(ModManager[ProfileInfo]):
                 file_overrides, file_blacklist, mod_overrides, game, game_folder
             )
 
-        self.log.debug(f"Loaded {len(mods)} mod(s) from instance {instance_name!r}.")
+        self.log.info(f"Loaded {len(mods)} mod(s) from instance '{instance_name}'.")
 
         return mods
 
@@ -342,7 +342,7 @@ class Vortex(ModManager[ProfileInfo]):
                 if ref_modname is None:
                     self.log.warning(
                         "Failed to process mod conflict rule for mod "
-                        f"{mod.display_name!r}: Reference mod name is empty!"
+                        f"'{mod.display_name}': Reference mod name is empty!"
                     )
                     continue
 
@@ -363,7 +363,7 @@ class Vortex(ModManager[ProfileInfo]):
                 else:
                     self.log.warning(
                         "Failed to process mod conflict rule for mod "
-                        f"{mod.display_name!r}: Unknown rule type {ruletype!r}!"
+                        f"'{mod.display_name}': Unknown rule type '{ruletype}'!"
                     )
 
         for mod, overwriting_mods in mod_overwrites.items():
@@ -392,7 +392,7 @@ class Vortex(ModManager[ProfileInfo]):
             )
             if not overwriting_files:
                 self.log.debug(
-                    f"Mod {mod.display_name!r} has irrelevant file overrides: {files}."
+                    f"Mod '{mod.display_name}' has irrelevant file overrides: {files}."
                 )
                 continue
 
@@ -405,7 +405,7 @@ class Vortex(ModManager[ProfileInfo]):
                     self.log.warning(
                         "Detected file override for multiple mods: "
                         f"{', '.join(m.display_name for m in overwriting_mods)} "
-                        f"override {mod.display_name!r} for file {file!r}."
+                        f"override '{mod.display_name}' for file '{file}'."
                     )
 
                 if len(overwriting_mods) >= 1:
@@ -422,7 +422,7 @@ class Vortex(ModManager[ProfileInfo]):
         file_blacklist: Optional[list[str]] = None,
         update_callback: Optional[UpdateCallback] = None,
     ) -> list[Tool]:
-        self.log.debug("Loading tools from Vortex...")
+        self.log.info("Loading tools from Vortex...")
         update(
             update_callback,
             ProgressUpdate(status_text=self.tr("Loading tools from Vortex...")),
@@ -450,7 +450,7 @@ class Vortex(ModManager[ProfileInfo]):
                 args: list[str] = tool_data.get("parameters") or []
             except Exception as ex:
                 self.log.error(
-                    f"Failed to load tool with id {tool_id!r}: {ex}", exc_info=ex
+                    f"Failed to load tool with id '{tool_id}': {ex}", exc_info=ex
                 )
                 continue
 
@@ -520,8 +520,8 @@ class Vortex(ModManager[ProfileInfo]):
         update_callback: Optional[UpdateCallback] = None,
     ) -> Instance:
         self.log.info(
-            f"Creating profile {instance_data.display_name!r} "
-            f"with id {instance_data.id!r}..."
+            f"Creating profile '{instance_data.display_name}' with id "
+            f"'{instance_data.id}'..."
         )
 
         game_id: str = instance_data.game.id.lower()
@@ -572,7 +572,7 @@ class Vortex(ModManager[ProfileInfo]):
         blacklist: Optional[list[str]] = None,
         update_callback: Optional[UpdateCallback] = None,
     ) -> None:
-        self.log.info(f"Installing mod {mod.display_name!r}...")
+        self.log.info(f"Installing mod '{mod.display_name}'...")
 
         if mod.mod_type == Mod.Type.Separator:
             self.log.info("Skipped mod because separators are not supported by Vortex.")
@@ -643,7 +643,7 @@ class Vortex(ModManager[ProfileInfo]):
                 update_callback=update_callback,
             )
         else:
-            self.log.info(f"Mod {mod.display_name!r} already installed.")
+            self.log.info(f"Mod '{mod.display_name}' already installed.")
 
         rules: list[dict[str, Any]] = db_mod_data.get("rules", [])
         # Check for rules
@@ -672,8 +672,8 @@ class Vortex(ModManager[ProfileInfo]):
             }
             rules.append(rule)
             self.log.debug(
-                f"Added conflict rule for mod {mod.display_name!r} "
-                f"overwritten by {overwriting_mod.display_name!r}."
+                f"Added conflict rule for mod '{mod.display_name}' "
+                f"overwritten by '{overwriting_mod.display_name}'."
             )
 
         if rules:
@@ -770,10 +770,10 @@ class Vortex(ModManager[ProfileInfo]):
         blacklist: Optional[list[str]] = None,
         update_callback: Optional[UpdateCallback] = None,
     ) -> None:
-        self.log.info(f"Adding tool {tool.display_name!r}...")
+        self.log.info(f"Adding tool '{tool.display_name}'...")
 
         if tool in instance.tools:
-            self.log.info(f"Tool {tool.display_name!r} already exists.")
+            self.log.info(f"Tool '{tool.display_name}' already exists.")
             return
 
         game_id: str = instance_data.game.id.lower()
@@ -843,7 +843,7 @@ class Vortex(ModManager[ProfileInfo]):
             if not mod.file_conflicts:
                 continue
 
-            self.log.info(f"Setting file overrides for {mod.display_name!r}...")
+            self.log.debug(f"Setting file overrides for '{mod.display_name}'...")
             full_mod_name: str = self.__get_unique_file_name(mod).rsplit(".", 1)[0]
             prefix: str = f"persistent###mods###{game.id.lower()}###{full_mod_name}###"
             mod_data: dict[str, Any] = self.__level_db.get_section(prefix)["persistent"][

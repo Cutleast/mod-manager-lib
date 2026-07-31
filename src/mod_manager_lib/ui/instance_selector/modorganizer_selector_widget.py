@@ -151,7 +151,7 @@ class ModOrganizerSelectorWidget(BaseSelectorWidget[MO2InstanceInfo, ModOrganize
 
         if not (instance_path / "ModOrganizer.ini").is_file():
             raise ValueError(
-                f"Invalid instance: {instance_path!r}! Please select a valid MO2 instance!"
+                f"Invalid instance: '{instance_path}'! Please select a valid MO2 instance!"
             )
 
         instance_ini_path: Path = instance_path / "ModOrganizer.ini"
