@@ -23,13 +23,13 @@ class Tool(BaseModel):
     mod: Optional[Mod]
     """
     The mod that contains the executable of this tool 
-    or None if the tool is outside of the modinstance.
+    or None if the tool is outside of the mod instance.
     """
 
     executable: Path
     """
     The path to the executable, relative to the folder of its mod
-    or absolute if the tool is outside of the modinstance.
+    or absolute if the tool is outside of the mod instance.
     Relative to the game folder if `is_in_game_dir` is True.
     """
 
@@ -67,9 +67,7 @@ class Tool(BaseModel):
             return self.mod.path / self.executable
         elif self.is_in_game_dir:
             if game_folder is None:
-                raise ValueError(
-                    "Game folder not specified but tool is in game folder!"
-                )
+                raise ValueError("Game folder not specified but tool is in game folder!")
 
             return game_folder / self.executable
         else:

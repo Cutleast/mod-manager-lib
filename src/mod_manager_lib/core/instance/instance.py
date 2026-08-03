@@ -14,7 +14,7 @@ from .tool import Tool
 
 class Instance(BaseModel):
     """
-    Model representing an entire modinstance.
+    Model representing an entire mod instance.
     """
 
     display_name: str
@@ -90,18 +90,23 @@ class Instance(BaseModel):
 
         return get_first_match(
             self.mods,
-            lambda m: m == mod
-            or (
-                (
-                    (m.display_name == mod.display_name and m.metadata == mod.metadata)
-                    or (
-                        m.metadata.mod_id == mod.metadata.mod_id
-                        and m.metadata.file_id == mod.metadata.file_id
-                        and bool(m.metadata.mod_id)
-                        and bool(m.metadata.file_id)
+            lambda m: (
+                m == mod
+                or (
+                    (
+                        (
+                            m.display_name == mod.display_name
+                            and m.metadata == mod.metadata
+                        )
+                        or (
+                            m.metadata.mod_id == mod.metadata.mod_id
+                            and m.metadata.file_id == mod.metadata.file_id
+                            and bool(m.metadata.mod_id)
+                            and bool(m.metadata.file_id)
+                        )
                     )
+                    and m.mod_type == mod.mod_type
                 )
-                and m.mod_type == mod.mod_type
             ),
         )
 
