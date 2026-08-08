@@ -380,6 +380,44 @@ class TestModOrganizer(BaseTest):
         assert migrated_overwritten_mod.files == overwritten_mod.files
         assert migrated_overwriting_mod.files == overwriting_mod.files
 
+    @pytest.mark.parametrize(
+        ("version", "expected_version"),
+        [
+            ("", None),
+            ("1", "1.0.0.0"),
+            ("1.0", "1.0.0.0"),
+            ("1.2.3", "1.2.3.0"),
+            ("1.2.3.4", "1.2.3.4"),
+            ("1.2.3.4.5", "1.2.3.4.5"),
+            ("f1.07", "f1.07.0.0"),
+        ],
+    )
+    def test_write_meta_ini_file_pads_version(
+        self, tmp_path: Path, version: str, expected_version: IniValue
+    ) -> None:
+        """
+        Tests that generated MO2 metadata contains at least four version segments.
+        """
+
+        # given
+        meta_ini_path: Path = tmp_path / "meta.ini"
+        metadata = Metadata(
+            mod_id=1,
+            file_id=2,
+            version=version,
+            file_name="test.7z",
+            game_id="skyrimspecialedition",
+        )
+
+        # when
+        ModOrganizer.write_meta_ini_file(
+            meta_ini_path, metadata, GameService.get_game_by_id("skyrimse")
+        )
+
+        # then
+        meta_ini_data: IniData = IniFile.load(meta_ini_path)
+        assert meta_ini_data["General"]["version"] == expected_version
+
     def test_install_mod_with_separator(
         self, test_fs: FakeFilesystem, instance: Instance
     ) -> None:

@@ -925,7 +925,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
                     game.short_name, game.short_name
                 ),
                 "modid": metadata.mod_id,
-                "version": metadata.version,
+                "version": ModOrganizer.__format_version(metadata.version),
                 "installationFile": metadata.file_name,
             },
             "installedFiles": {
@@ -935,6 +935,17 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             },
         }
         IniFile.save(meta_ini_path, meta_ini_data)
+
+    @staticmethod
+    def __format_version(version: str) -> str:
+        """Pads a non-empty MO2 version to at least four segments."""
+
+        if not version:
+            return version
+
+        segments: list[str] = version.split(".")
+        segments.extend("0" for _ in range(4 - len(segments)))
+        return ".".join(segments)
 
     @override
     def add_tool(
