@@ -107,7 +107,7 @@ class BaseSelectorWidget(QWidget, Generic[InstanceInfoType, ModManagerType]):
             game (Game): The game for which the selected instance belongs to.
 
         Returns:
-            I: The data for the selected instance
+            InstanceInfoType: The data for the selected instance
         """
 
     @abstractmethod
@@ -116,7 +116,7 @@ class BaseSelectorWidget(QWidget, Generic[InstanceInfoType, ModManagerType]):
         Sets the currently selected instance.
 
         Args:
-            instance_data (I): The data for the selected instance.
+            instance_data (InstanceInfoType): The data for the selected instance.
         """
 
     @abstractmethod

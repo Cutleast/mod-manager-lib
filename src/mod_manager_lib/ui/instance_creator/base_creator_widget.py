@@ -68,5 +68,5 @@ class BaseCreatorWidget(QWidget, Generic[InstanceInfoType]):
             game (Game): The game of the instance
 
         Returns:
-            I: The data for the customized instance
+            InstanceInfoType: The data for the customized instance
         """

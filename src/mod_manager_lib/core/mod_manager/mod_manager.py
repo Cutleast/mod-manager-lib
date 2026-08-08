@@ -68,7 +68,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
         Loads and returns the mod instance with the given name.
 
         Args:
-            instance_data (I): The data of the mod instance.
+            instance_data (InstanceInfoType): The data of the mod instance.
             modname_limit (int, optional):
                 A character limit for mod names. Defaults to 255.
             file_blacklist (Optional[list[str]], optional):
@@ -104,7 +104,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
         Loads and returns a list of mods for the given instance name.
 
         Args:
-            instance_data (I): The data of the mod instance.
+            instance_data (InstanceInfoType): The data of the mod instance.
             game_folder (Path): The game folder of the instance.
             modname_limit (int, optional):
                 A character limit for mod names. Defaults to 255.
@@ -133,7 +133,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
         Loads and returns a list of tools for the given instance.
 
         Args:
-            instance_data (I): The data of the mod instance.
+            instance_data (InstanceInfoType): The data of the mod instance.
             mods (list[Mod]): The list of already loaded mods.
             game_folder (Path): The game folder of the instance.
             file_blacklist (Optional[list[str]], optional):
@@ -231,7 +231,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
         Prepares a mod instance for modifications.
 
         Args:
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
         """
 
     @abstractmethod
@@ -245,7 +245,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
         Creates an instance in this mod manager.
 
         Args:
-            instance_data (Instance_data): The customized instance data to create.
+            instance_data (InstanceInfoType): The customized instance data to create.
             game_folder (Path): The game folder to use for the created instance.
             update_callback (Optional[UpdateCallback], optional):
                 Optional update callback for progress updates. Defaults to None.
@@ -275,7 +275,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
         Args:
             mod (Mod): The mod to install.
             instance (Instance): The instance to install the mod to.
-            instance_data (I): The data of the instance above.
+            instance_data (InstanceInfoType): The data of the instance above.
             file_redirects (dict[Path, Path]): A dict of file redirects.
             use_hardlinks (bool): Whether to use hardlinks if possible.
             replace (bool): Whether to replace existing files.
@@ -302,7 +302,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
         Args:
             tool (Tool): The tool to add.
             instance (Instance): The instance to add the tool to.
-            instance_data (I): The data of the instance above.
+            instance_data (InstanceInfoType): The data of the instance above.
             use_hardlinks (bool): Whether to use hardlinks if possible.
             replace (bool): Whether to replace existing files.
             blacklist (Optional[list[str]], optional):
@@ -391,7 +391,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
 
         Args:
             instance (Instance): The instance.
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
 
         Returns:
             list[Path]: The list of INI files.
@@ -410,7 +410,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
         instance's INI folder.
 
         Args:
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
             separate_ini_files (bool): Whether to use separate INI folders.
 
         Returns:
@@ -428,7 +428,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
         Returns the path to the instance's INI folder.
 
         Args:
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
 
         Returns:
             Path: The path to the instance's INI folder.
@@ -448,7 +448,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
 
         Args:
             files (list[Path]): The INI files to migrate.
-            dst_instance_data (I): The data of the destination instance.
+            dst_instance_data (InstanceInfoType): The data of the destination instance.
             separate_ini_files (bool): Whether to use separate INI folders.
             use_hardlinks (bool): Whether to use hardlinks if possible.
             replace (bool): Whether to replace existing files.
@@ -500,7 +500,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
         Returns a list of additional files to belonging to an instance.
 
         Args:
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
 
         Returns:
             list[Path]: The list of additional files.
@@ -528,7 +528,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
 
         Args:
             files (list[Path]): The list of additional files.
-            dst_instance_data (I): The data of the destination instance.
+            dst_instance_data (InstanceInfoType): The data of the destination instance.
             use_hardlinks (bool): Whether to use hardlinks if possible.
             replace (bool): Whether to replace existing files.
             update_callback (Optional[UpdateCallback], optional):
@@ -576,7 +576,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
         Gets the path for the additional files of the specified instance.
 
         Args:
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
 
         Returns:
             Path: The path for the additional files.
@@ -593,7 +593,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
 
         Args:
             instance (Instance): The mod instance to finalize.
-            instance_data (I): The data of the mod instance to finalize.
+            instance_data (InstanceInfoType): The data of the mod instance to finalize.
             activate_instance (bool):
                 Whether to activate the instance (if supported by the mod manager).
         """
@@ -604,7 +604,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
         Returns the path to the specified instance's mods folder.
 
         Args:
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
 
         Returns:
             Path: The path to the mods folder.
@@ -616,7 +616,7 @@ class ModManager(QObject, Generic[InstanceInfoType]):
         Checks if the specified instance exists.
 
         Args:
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
 
         Returns:
             bool: Whether the instance exists.
