@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 from base_test import BaseTest
-from cutleast_core_lib.core.utilities.ini_file import IniData, IniFile
+from cutleast_core_lib.core.utilities.ini_file import IniData, IniFile, IniValue
 from cutleast_core_lib.test.utils import Utils
 from mod_manager_lib.core.game import Game
 from mod_manager_lib.core.game_service import GameService
@@ -138,6 +138,65 @@ class TestModOrganizer(BaseTest):
         assert overwrite_mod.mod_type == Mod.Type.Overwrite
         assert overwrite_mod.files == [Path("test.txt")]
 
+    def test_modorganizer_ini_is_case_insensitive(
+        self, test_fs: FakeFilesystem, mo2_instance_info: MO2InstanceInfo
+    ) -> None:
+        """
+        Tests that `ModOrganizer.ini` sections and keys are case-insensitive.
+        """
+
+        # given
+        mo2 = ModOrganizer()
+        portable_ini_path: Path = mo2_instance_info.base_folder / "ModOrganizer.ini"
+        global_ini_path: Path = mo2.appdata_path / "Test Instance" / "ModOrganizer.ini"
+        for ini_path in [portable_ini_path, global_ini_path]:
+            ini_data: IniData = IniFile.load(ini_path)
+            lowercase_ini_data: IniData = {
+                section.casefold(): {
+                    key.casefold(): value for key, value in values.items()
+                }
+                for section, values in ini_data.items()
+            }
+            IniFile.save(ini_path, lowercase_ini_data)
+
+        # when
+        instance: Instance = mo2.load_instance(mo2_instance_info)
+        new_tool = Tool(
+            display_name="Case-insensitive tool",
+            mod=None,
+            executable=Path("C:/Tools/test.exe"),
+            commandline_args=[],
+            working_dir=None,
+            is_in_game_dir=False,
+        )
+        mo2.add_tool(
+            new_tool,
+            instance,
+            mo2_instance_info,
+            use_hardlinks=False,
+            replace=False,
+        )
+
+        # then
+        assert instance.game_folder == Path("E:/SteamLibrary/Skyrim Special Edition")
+        assert len(instance.tools) == 4
+        assert mo2.get_instance_names(mo2_instance_info.game) == ["Test Instance"]
+        assert mo2.get_profile_names(portable_ini_path) == ["Default", "TestProfile"]
+        assert mo2.get_last_active_profile(portable_ini_path) == "Default"
+
+        updated_ini_data: IniData = IniFile.load(portable_ini_path)
+        custom_executable_sections: list[str] = [
+            section
+            for section in updated_ini_data
+            if section.casefold() == "customexecutables"
+        ]
+        assert custom_executable_sections == ["customexecutables"]
+        custom_executables: dict[str, IniValue] = updated_ini_data[
+            custom_executable_sections[0]
+        ]
+        assert custom_executables["size"] == 6
+        assert custom_executables["6\\title"] == new_tool.display_name
+
     @staticmethod
     def process_conflicts_stub(mods: list[Mod], file_blacklist: list[str]) -> None:
         """
@@ -167,7 +226,9 @@ class TestModOrganizer(BaseTest):
             "test_file_3": [mods[4]],
         }
 
-        for i in range(100_000, 500_000):  # simulate a large mod list with lots of files
+        for i in range(
+            100_000, 500_000
+        ):  # simulate a large mod list with lots of files
             file_index[f"test_file_{i}"] = [mods[i // 100_000]]
 
             # add some hidden files
@@ -214,7 +275,9 @@ class TestModOrganizer(BaseTest):
 
         # then
         assert mod1_file_redirects == {}
-        assert mod2_file_redirects == {Path("test_file_2.mohidden"): Path("test_file_2")}
+        assert mod2_file_redirects == {
+            Path("test_file_2.mohidden"): Path("test_file_2")
+        }
 
     def test_create_instance(self, test_fs: FakeFilesystem) -> None:
         """
