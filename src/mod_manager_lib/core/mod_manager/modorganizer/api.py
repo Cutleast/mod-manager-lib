@@ -50,27 +50,6 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
     API class for Mod Organizer 2.
     """
 
-    @staticmethod
-    def __get_case_insensitive(
-        mapping: Mapping[str, MappingValueType], key: str
-    ) -> Optional[MappingValueType]:
-        """Returns a mapping value without requiring an exact key case match."""
-
-        folded_key: str = key.casefold()
-        return next(
-            (value for name, value in mapping.items() if name.casefold() == folded_key),
-            None,
-        )
-
-    @staticmethod
-    def __get_case_insensitive_key(
-        mapping: Mapping[str, object], key: str
-    ) -> Optional[str]:
-        """Returns the existing spelling of a mapping key, if present."""
-
-        folded_key: str = key.casefold()
-        return next((name for name in mapping if name.casefold() == folded_key), None)
-
     # TODO: Make this dynamic instead of a fixed url
     DOWNLOAD_URL: str = "https://github.com/ModOrganizer2/modorganizer/releases/download/v2.5.2/Mod.Organizer-2.5.2.7z"
 
@@ -1335,3 +1314,42 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             return profile_path.is_dir()
 
         return False
+
+    @staticmethod
+    def __get_case_insensitive(
+        mapping: Mapping[str, MappingValueType], key: str
+    ) -> Optional[MappingValueType]:
+        """
+        Gets a mapping value without requiring an exact key case match.
+
+        Args:
+            mapping (Mapping[str, MappingValueType]): Mapping to search.
+            key (str): Key to search for.
+
+        Returns:
+            Optional[MappingValueType]: Matching value, if present.
+        """
+
+        folded_key: str = key.casefold()
+        return next(
+            (value for name, value in mapping.items() if name.casefold() == folded_key),
+            None,
+        )
+
+    @staticmethod
+    def __get_case_insensitive_key(
+        mapping: Mapping[str, object], key: str
+    ) -> Optional[str]:
+        """
+        Gets the existing spelling of a mapping key, if present.
+
+        Args:
+            mapping (Mapping[str, object]): Mapping to search.
+            key (str): Key to search for.
+
+        Returns:
+            Optional[str]: Existing spelling of the matching key, if present.
+        """
+
+        folded_key: str = key.casefold()
+        return next((name for name in mapping if name.casefold() == folded_key), None)
