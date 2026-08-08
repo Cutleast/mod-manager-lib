@@ -347,6 +347,16 @@ class TestVortex(BaseTest):
                 "type": None,
             },
         )
+        legacy_profile_mod_data: dict[str, Any] = {
+            "enabled": False,
+            "enabledTime": 1,
+        }
+        other_profile_id = "other-profile"
+        for profile_id in (profile_info.id, other_profile_id):
+            database.set_section(
+                f"persistent###profiles###{profile_id}###modState###{legacy_id}###",
+                legacy_profile_mod_data,
+            )
         database.save()
 
         # when
@@ -370,6 +380,15 @@ class TestVortex(BaseTest):
             mods_data[vortex_id]["attributes"]["customFileName"]
             == "Existing legacy record"
         )
+        profiles_data: dict[str, Any] = database.get_section(
+            "persistent###profiles###"
+        )["persistent"]["profiles"]
+        target_mod_states: dict[str, Any] = profiles_data[profile_info.id]["modState"]
+        assert set(target_mod_states) == {vortex_id}
+        assert target_mod_states[vortex_id]["enabled"] is True
+        other_mod_states: dict[str, Any] = profiles_data[other_profile_id]["modState"]
+        assert set(other_mod_states) == {vortex_id}
+        assert other_mod_states[vortex_id] == legacy_profile_mod_data
         assert (staging_path / "existing.txt").is_file()
         assert not (staging_path / "new.txt").exists()
 

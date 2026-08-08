@@ -627,6 +627,32 @@ class Vortex(ModManager[ProfileInfo]):
                     .get(legacy_vortex_id, {})
                 )
                 if db_mod_data:
+                    profiles_data: dict[str, Any] = (
+                        self.__level_db.get_section("persistent###profiles###")
+                        .get("persistent", {})
+                        .get("profiles", {})
+                    )
+                    for profile_id, profile_data in profiles_data.items():
+                        mod_states: dict[str, dict[str, Any]] = profile_data.get(
+                            "modState", {}
+                        )
+                        if legacy_vortex_id not in mod_states:
+                            continue
+
+                        legacy_profile_prefix: str = (
+                            f"persistent###profiles###{profile_id}###modState###"
+                            f"{legacy_vortex_id}###"
+                        )
+                        self.__level_db.delete_section(legacy_profile_prefix)
+                        if vortex_id not in mod_states:
+                            profile_prefix: str = (
+                                f"persistent###profiles###{profile_id}###modState###"
+                                f"{vortex_id}###"
+                            )
+                            self.__level_db.set_section(
+                                profile_prefix, mod_states[legacy_vortex_id]
+                            )
+
                     self.__level_db.delete_section(legacy_db_prefix)
                     db_mod_data["id"] = vortex_id
                     mod_folder = staging_folder / db_mod_data.get(
