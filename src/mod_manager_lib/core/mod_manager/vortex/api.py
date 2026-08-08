@@ -613,6 +613,30 @@ class Vortex(ModManager[ProfileInfo]):
             .get(vortex_id, {})
         )
 
+        if not db_mod_data and mod.variant is None:
+            legacy_vortex_id: str = installation_file_name.rsplit(".", 1)[0]
+            if legacy_vortex_id != vortex_id:
+                legacy_db_prefix: str = (
+                    f"persistent###mods###{game_id}###{legacy_vortex_id}###"
+                )
+                db_mod_data = (
+                    self.__level_db.get_section(legacy_db_prefix)
+                    .get("persistent", {})
+                    .get("mods", {})
+                    .get(game_id, {})
+                    .get(legacy_vortex_id, {})
+                )
+                if db_mod_data:
+                    self.__level_db.delete_section(legacy_db_prefix)
+                    db_mod_data["id"] = vortex_id
+                    mod_folder = staging_folder / db_mod_data.get(
+                        "installationPath", vortex_id
+                    )
+                    self.log.info(
+                        f"Migrating legacy Vortex ID '{legacy_vortex_id}' to "
+                        f"'{vortex_id}'."
+                    )
+
         if not db_mod_data:
             logical_file_name: str = Vortex.get_logical_file_name(
                 installation_file_name, mod.metadata.mod_id or 0

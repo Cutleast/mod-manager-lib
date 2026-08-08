@@ -30,6 +30,7 @@ class LevelDB:
     __symlink_path: Optional[Path]
 
     __data: dict[str, str]
+    __deleted_keys: set[str]
     __changes_pending: bool
 
     log: logging.Logger = logging.getLogger("LevelDB")
@@ -46,6 +47,7 @@ class LevelDB:
 
         self.__symlink_path = None
         self.__data = {}
+        self.__deleted_keys = set()
         self.__changes_pending = False
 
     def get_symlink_path(self) -> Path:
@@ -138,7 +140,9 @@ class LevelDB:
 
         with ldb.DB(str(db_path)) as database:
             for key, value in database.iterator(prefix=prefix):
-                raw_data[key.decode()] = value.decode()
+                decoded_key: str = key.decode()
+                if decoded_key not in self.__deleted_keys:
+                    raw_data[decoded_key] = value.decode()
 
         self.__data.update(raw_data)
         self.log.info("Database loaded.")
@@ -158,9 +162,12 @@ class LevelDB:
         self.log.info(f"Saving database to '{db_path}'...")
 
         with ldb.DB(str(db_path)) as database, database.write_batch() as batch:
+            for key in self.__deleted_keys:
+                batch.delete(key.encode())
             for key, value in self.__data.items():
                 batch.put(key.encode(), value.encode())
 
+        self.__deleted_keys.clear()
         self.__changes_pending = False
         self.log.info("Database saved.")
 
@@ -184,7 +191,7 @@ class LevelDB:
         with ldb.DB(str(db_path)) as database:
             for raw_key, raw_value in database.iterator(prefix=prefix_bytes):
                 key: str = raw_key.decode()
-                if key not in self.__data:
+                if key not in self.__data and key not in self.__deleted_keys:
                     self.__data[key] = raw_value.decode()
                     self.__changes_pending = True
 
@@ -207,6 +214,30 @@ class LevelDB:
 
         raw_data: dict[str, str] = LevelDB.flatten_nested_dict(data, prefix=prefix)
         self.__data.update(raw_data)
+        self.__deleted_keys.difference_update(raw_data)
+        self.__changes_pending = True
+
+    def delete_section(self, prefix: str) -> None:
+        """
+        Deletes all key-value pairs starting with the given prefix on save.
+
+        Args:
+            prefix (str): The prefix of the section to delete.
+        """
+
+        keys: set[str] = {key for key in self.__data if key.startswith(prefix)}
+        with ldb.DB(str(self.get_symlink_path())) as database:
+            keys.update(
+                raw_key.decode()
+                for raw_key, _ in database.iterator(prefix=prefix.encode())
+            )
+
+        if not keys:
+            return
+
+        for key in keys:
+            self.__data.pop(key, None)
+        self.__deleted_keys.update(keys)
         self.__changes_pending = True
 
     def get_key(self, key: str) -> Optional[Any]:
@@ -220,6 +251,9 @@ class LevelDB:
         Returns:
             Optional[Any]: The value of the key or None if the key does not exist.
         """
+
+        if key in self.__deleted_keys:
+            return None
 
         if key not in self.__data:
             self.load(prefix=key)
@@ -237,6 +271,7 @@ class LevelDB:
         """
 
         self.__data[key] = json.dumps(value)
+        self.__deleted_keys.discard(key)
         self.__changes_pending = True
 
     @staticmethod

@@ -295,6 +295,84 @@ class TestVortex(BaseTest):
         dst_profile = vortex.load_instance(profile_info)
         assert dst_profile.mods[-1].metadata == mod.metadata
 
+    def test_install_mod_migrates_legacy_non_variant_id(
+        self, test_fs: FakeFilesystem, ready_vortex_db: MockPlyvelDB
+    ) -> None:
+        """Tests an existing raw archive ID is migrated instead of duplicated."""
+
+        # given
+        vortex = Vortex()
+        vortex.db_path.mkdir(parents=True, exist_ok=True)
+        profile_info = ProfileInfo(
+            display_name="Legacy ID test",
+            game=GameService.get_game_by_id("skyrimse"),
+            id="legacy-id-test",
+        )
+        instance: Instance = vortex.create_instance(
+            profile_info, Path("E:/SteamLibrary/Skyrim Special Edition")
+        )
+        archive_name = "Legacy: Mod.7z"
+        legacy_id = "Legacy: Mod"
+        vortex_id = "Legacy Mod"
+        staging_path = Path("E:/Modding/Vortex/skyrimse") / vortex_id
+        test_fs.create_file(staging_path / "existing.txt")
+        source_path = Path("C:/Source/Legacy Mod")
+        test_fs.create_file(source_path / "new.txt")
+        mod = Mod(
+            display_name="Legacy Mod",
+            path=source_path,
+            deploy_path=None,
+            metadata=Metadata(
+                mod_id=None,
+                file_id=None,
+                version="1.0",
+                file_name=archive_name,
+                game_id="skyrimspecialedition",
+            ),
+            installed=True,
+            enabled=True,
+        )
+        database: LevelDB = Utils.get_private_field(vortex, *TestVortex.DATABASE)
+        legacy_prefix = f"persistent###mods###skyrimse###{legacy_id}###"
+        database.set_section(
+            legacy_prefix,
+            {
+                "attributes": {
+                    "customFileName": "Existing legacy record",
+                    "fileName": archive_name,
+                },
+                "id": legacy_id,
+                "installationPath": vortex_id,
+                "state": "installed",
+                "type": None,
+            },
+        )
+        database.save()
+
+        # when
+        vortex.install_mod(
+            mod,
+            instance,
+            profile_info,
+            file_redirects={},
+            use_hardlinks=False,
+            replace=True,
+        )
+        vortex.finalize_instance(instance, profile_info, activate_instance=False)
+
+        # then
+        mods_data: dict[str, Any] = database.get_section(
+            "persistent###mods###skyrimse###"
+        )["persistent"]["mods"]["skyrimse"]
+        assert set(mods_data) == {vortex_id}
+        assert mods_data[vortex_id]["id"] == vortex_id
+        assert (
+            mods_data[vortex_id]["attributes"]["customFileName"]
+            == "Existing legacy record"
+        )
+        assert (staging_path / "existing.txt").is_file()
+        assert not (staging_path / "new.txt").exists()
+
     def test_install_and_load_mod_variants(
         self, test_fs: FakeFilesystem, ready_vortex_db: MockPlyvelDB
     ) -> None:

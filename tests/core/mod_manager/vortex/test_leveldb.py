@@ -169,6 +169,31 @@ class TestLevelDB(BaseTest):
         assert full_vortex_db.get(key.encode()) == b'"v1"'
         assert Utils.get_private_field(leveldb, *TestLevelDB.CHANGES_PENDING) is False
 
+    def test_delete_section_removes_keys_on_save(
+        self, full_vortex_db: MockPlyvelDB
+    ) -> None:
+        """Tests deleting a section removes its keys from memory and storage."""
+
+        # given
+        leveldb = LevelDB(Path(), use_symlink=False)
+        prefix = (
+            "persistent###mods###skyrimse###"
+            "Obsidian Weathers - 1.07a-12125-1-07a-1620568126###"
+        )
+        assert list(full_vortex_db.iterator(prefix=prefix.encode()))
+
+        # when
+        leveldb.delete_section(prefix)
+
+        # then
+        assert leveldb.get_section(prefix) == {}
+
+        # when
+        leveldb.save()
+
+        # then
+        assert list(full_vortex_db.iterator(prefix=prefix.encode())) == []
+
     def test_get_section_parsing(self, full_vortex_db: MockPlyvelDB) -> None:
         """
         Tests that get_section() correctly parses nested data.
