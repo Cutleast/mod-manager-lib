@@ -460,10 +460,10 @@ class TestModOrganizer(BaseTest):
         assert not (mod_folder / "Data").exists()
         assert not (mod_folder / "Root" / "Data").exists()
 
-    def test_root_builder_treats_file_named_like_mods_folder_as_root_file(
+    def test_root_builder_keeps_file_named_like_mods_folder_at_mod_root(
         self,
     ) -> None:
-        """Tests a file named `Data` is not redirected to the mod directory itself."""
+        """Tests a file named `Data` remains a file at the MO2 mod root."""
 
         # given
         get_root_builder_path = Utils.get_private_method(
@@ -476,7 +476,7 @@ class TestModOrganizer(BaseTest):
         root_builder_path: Path = get_root_builder_path(Path("Data"), Path("data"))
 
         # then
-        assert root_builder_path == Path("Root/Data")
+        assert root_builder_path == Path("Data")
 
     @pytest.mark.parametrize(
         ("version", "expected_version"),

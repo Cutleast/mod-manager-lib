@@ -987,7 +987,9 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         file_prefix: tuple[str, ...] = file.parts[: len(mods_folder_parts)]
         if tuple(part.casefold() for part in file_prefix) == tuple(
             part.casefold() for part in mods_folder_parts
-        ) and len(file.parts) > len(mods_folder_parts):
+        ):
+            if len(file.parts) == len(mods_folder_parts):
+                return file
             return Path(*file.parts[len(mods_folder_parts) :])
 
         return Path("Root") / file
