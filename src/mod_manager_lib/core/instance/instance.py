@@ -142,6 +142,8 @@ class Instance(BaseModel):
         if order_matters:
             return self.mods.copy()
 
+        # Conflict references may be copies, so use identity as the fast path and
+        # cache the existing semantic lookup as a fallback.
         mod_indices: dict[int, int] = {
             id(mod): index for index, mod in enumerate(self.mods)
         }
@@ -149,6 +151,7 @@ class Instance(BaseModel):
         successors: list[set[int]] = [set() for _ in self.mods]
         predecessors: list[set[int]] = [set() for _ in self.mods]
 
+        # A conflict edge points from the overwritten mod to the overwriting mod.
         for source_index, mod in enumerate(self.mods):
             for conflict in mod.mod_conflicts:
                 conflict_id = id(conflict)
@@ -170,6 +173,8 @@ class Instance(BaseModel):
                 successors[source_index].add(target_index)
                 predecessors[target_index].add(source_index)
 
+        # The heap keeps currently unconstrained mods alphabetically ordered while
+        # the original index provides a stable tie-breaker for equal names.
         indegrees: list[int] = [len(nodes) for nodes in predecessors]
         ready: list[tuple[str, int]] = [
             (mod.display_name, index)
@@ -189,6 +194,8 @@ class Instance(BaseModel):
                     target = self.mods[target_index]
                     heappush(ready, (target.display_name, target_index))
 
+        # Nodes left with incoming edges are blocked by a cycle and must not be
+        # appended in an order that violates conflict rules.
         if len(loadorder) != len(self.mods):
             cycle = self.__find_conflict_cycle(predecessors, indegrees)
             raise CyclicModConflictError(
@@ -220,6 +227,8 @@ class Instance(BaseModel):
         positions: dict[int, int] = {}
         reverse_path: list[int] = []
 
+        # Every remaining node has a remaining predecessor. Following these links
+        # therefore reaches a repeated node without recursive graph traversal.
         while current not in positions:
             positions[current] = len(reverse_path)
             reverse_path.append(current)
@@ -228,6 +237,7 @@ class Instance(BaseModel):
                 key=lambda index: (self.mods[index].display_name, index),
             )
 
+        # Predecessors were followed backwards, so restore the conflict direction.
         reverse_cycle = reverse_path[positions[current] :] + [current]
         return list(reversed(reverse_cycle))
 
