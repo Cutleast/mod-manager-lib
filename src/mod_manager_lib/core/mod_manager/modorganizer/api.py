@@ -44,30 +44,32 @@ from .instance_info import MO2InstanceInfo
 MappingValueType = TypeVar("MappingValueType")
 
 
-def _get_case_insensitive(
-    mapping: Mapping[str, MappingValueType], key: str
-) -> Optional[MappingValueType]:
-    """Returns a mapping value without requiring an exact key case match."""
-
-    folded_key: str = key.casefold()
-    return next(
-        (value for name, value in mapping.items() if name.casefold() == folded_key),
-        None,
-    )
-
-
-def _get_case_insensitive_key(mapping: Mapping[str, object], key: str) -> Optional[str]:
-    """Returns the existing spelling of a mapping key, if present."""
-
-    folded_key: str = key.casefold()
-    return next((name for name in mapping if name.casefold() == folded_key), None)
-
-
 @final
 class ModOrganizer(ModManager[MO2InstanceInfo]):
     """
     API class for Mod Organizer 2.
     """
+
+    @staticmethod
+    def __get_case_insensitive(
+        mapping: Mapping[str, MappingValueType], key: str
+    ) -> Optional[MappingValueType]:
+        """Returns a mapping value without requiring an exact key case match."""
+
+        folded_key: str = key.casefold()
+        return next(
+            (value for name, value in mapping.items() if name.casefold() == folded_key),
+            None,
+        )
+
+    @staticmethod
+    def __get_case_insensitive_key(
+        mapping: Mapping[str, object], key: str
+    ) -> Optional[str]:
+        """Returns the existing spelling of a mapping key, if present."""
+
+        folded_key: str = key.casefold()
+        return next((name for name in mapping if name.casefold() == folded_key), None)
 
     # TODO: Make this dynamic instead of a fixed url
     DOWNLOAD_URL: str = "https://github.com/ModOrganizer2/modorganizer/releases/download/v2.5.2/Mod.Organizer-2.5.2.7z"
@@ -101,14 +103,14 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         if self.appdata_path.is_dir():
             for instance_ini in self.appdata_path.glob("**/ModOrganizer.ini"):
                 instance_data: IniData = IniFile.load(instance_ini)
-                general: Optional[dict[str, IniValue]] = _get_case_insensitive(
-                    instance_data, "General"
+                general: Optional[dict[str, IniValue]] = (
+                    ModOrganizer.__get_case_insensitive(instance_data, "General")
                 )
                 if general is None:
                     continue
 
                 instance_game: str = str(
-                    _get_case_insensitive(general, "gameName") or ""
+                    ModOrganizer.__get_case_insensitive(general, "gameName") or ""
                 )
                 if instance_game.lower() == game.display_name.lower():
                     instances.append(instance_ini.parent.name)
@@ -144,9 +146,11 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
 
         mo2_ini_data: IniData = IniFile.load(mo2_ini_path)
         general: dict[str, IniValue] = (
-            _get_case_insensitive(mo2_ini_data, "General") or {}
+            ModOrganizer.__get_case_insensitive(mo2_ini_data, "General") or {}
         )
-        raw_game_folder: IniValue = _get_case_insensitive(general, "gamePath")
+        raw_game_folder: IniValue = ModOrganizer.__get_case_insensitive(
+            general, "gamePath"
+        )
         if isinstance(raw_game_folder, str):
             raw_game_folder = ModOrganizer.BYTE_ARRAY_PATTERN.sub(
                 r"\1", raw_game_folder
@@ -192,9 +196,9 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         )
 
         widgets: dict[str, IniValue] = (
-            _get_case_insensitive(mo2_ini_data, "Widgets") or {}
+            ModOrganizer.__get_case_insensitive(mo2_ini_data, "Widgets") or {}
         )
-        last_tool_index: IniValue = _get_case_insensitive(
+        last_tool_index: IniValue = ModOrganizer.__get_case_insensitive(
             widgets, "MainWindow_executablesListBox_index"
         )
         last_tool: Optional[Tool] = None
@@ -629,10 +633,10 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
 
         mo2_ini_data: IniData = IniFile.load(mo2_ini_path)
         custom_executables: dict[str, IniValue] = (
-            _get_case_insensitive(mo2_ini_data, "customExecutables") or {}
+            ModOrganizer.__get_case_insensitive(mo2_ini_data, "customExecutables") or {}
         )
         custom_executables_size: IniValue = (
-            _get_case_insensitive(custom_executables, "size") or 0
+            ModOrganizer.__get_case_insensitive(custom_executables, "size") or 0
         )
         if not isinstance(custom_executables_size, int):
             return []
@@ -643,19 +647,26 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
                 exe_path = Path(
                     checked_cast(
                         str,
-                        _get_case_insensitive(custom_executables, f"{i}\\binary"),
+                        ModOrganizer.__get_case_insensitive(
+                            custom_executables, f"{i}\\binary"
+                        ),
                     )
                 )
                 raw_args: str = checked_cast(
                     str,
-                    _get_case_insensitive(custom_executables, f"{i}\\arguments") or "",
+                    ModOrganizer.__get_case_insensitive(
+                        custom_executables, f"{i}\\arguments"
+                    )
+                    or "",
                 )
                 name: str = checked_cast(
                     str,
-                    _get_case_insensitive(custom_executables, f"{i}\\title"),
+                    ModOrganizer.__get_case_insensitive(
+                        custom_executables, f"{i}\\title"
+                    ),
                 )
                 raw_working_dir: Optional[IniValue] = custom_executables[
-                    _get_case_insensitive_key(
+                    ModOrganizer.__get_case_insensitive_key(
                         custom_executables, f"{i}\\workingDirectory"
                     )
                     or f"{i}\\workingDirectory"
@@ -1053,7 +1064,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
 
         mo2_ini_path: Path = instance_data.base_folder / "ModOrganizer.ini"
         mo2_ini_data: IniData = IniFile.load(mo2_ini_path)
-        section_key: Optional[str] = _get_case_insensitive_key(
+        section_key: Optional[str] = ModOrganizer.__get_case_insensitive_key(
             mo2_ini_data, "customExecutables"
         )
         if section_key is None:
@@ -1061,7 +1072,10 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             mo2_ini_data[section_key] = {"size": 0}
         custom_executables: dict[str, IniValue] = mo2_ini_data[section_key]
 
-        size_key: str = _get_case_insensitive_key(custom_executables, "size") or "size"
+        size_key: str = (
+            ModOrganizer.__get_case_insensitive_key(custom_executables, "size")
+            or "size"
+        )
         new_index = int(custom_executables.get(size_key) or 0) + 1
 
         new_tool: Tool = copy(tool)
@@ -1162,20 +1176,22 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         """Resolves a configured MO2 directory relative to its base directory."""
 
         ini_data: IniData = IniFile.load(mo2_ini_path)
-        settings: Optional[dict[str, IniValue]] = _get_case_insensitive(
+        settings: Optional[dict[str, IniValue]] = ModOrganizer.__get_case_insensitive(
             ini_data, "Settings"
         )
         if settings is None:
             raise KeyError("Settings")
 
-        raw_base_dir: IniValue = _get_case_insensitive(settings, "base_directory")
+        raw_base_dir: IniValue = ModOrganizer.__get_case_insensitive(
+            settings, "base_directory"
+        )
         base_dir: Path = (
             Path(checked_cast(str, raw_base_dir))
             if raw_base_dir is not None
             else mo2_ini_path.parent
         )
 
-        raw_dir: IniValue = _get_case_insensitive(settings, directory_key)
+        raw_dir: IniValue = ModOrganizer.__get_case_insensitive(settings, directory_key)
         if raw_dir is None:
             return base_dir / default_name
 
@@ -1258,13 +1274,13 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         """
 
         ini_data: IniData = IniFile.load(mo2_ini_path)
-        general: Optional[dict[str, IniValue]] = _get_case_insensitive(
+        general: Optional[dict[str, IniValue]] = ModOrganizer.__get_case_insensitive(
             ini_data, "General"
         )
         if general is None:
             raise KeyError("General")
 
-        profile_name: Optional[IniValue] = _get_case_insensitive(
+        profile_name: Optional[IniValue] = ModOrganizer.__get_case_insensitive(
             general, "selected_profile"
         )
         if profile_name is None:
