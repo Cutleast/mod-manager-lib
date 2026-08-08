@@ -239,10 +239,10 @@ class Vortex(ModManager[ProfileInfo]):
             mod_path: Path = staging_folder / moddata.get("installationPath", modname)
             file_name: str = mod_meta_data.get("fileName", mod_path.name)
             variant: Optional[str] = Vortex.__get_variant(modname, file_name)
+            # Limit the base name while retaining the complete variant suffix.
+            display_name = display_name[:modname_limit].strip("-_. ")
             if variant and not display_name.casefold().endswith(variant.casefold()):
                 display_name += f" - {variant}"
-            # Limit mod name as it can get very long.
-            display_name = display_name[:modname_limit].strip("-_. ")
 
             deploy_path: Optional[Path] = None
             modtype: Optional[str] = moddata.get("type") or None
@@ -340,18 +340,30 @@ class Vortex(ModManager[ProfileInfo]):
 
             for rule in rules:
                 reference: dict[str, str] = rule["reference"]  # type: ignore[assignment]
-                ref_modname: Optional[str] = reference.get("id") or reference.get(
-                    "fileExpression"
-                )
+                ref_mod_id: Optional[str] = reference.get("id")
+                file_expression: Optional[str] = reference.get("fileExpression")
 
-                if ref_modname is None:
+                if ref_mod_id is None and file_expression is None:
                     self.log.warning(
                         "Failed to process mod conflict rule for mod "
                         f"'{mod.display_name}': Reference mod name is empty!"
                     )
                     continue
 
-                ref_mod: Optional[Mod] = mods_by_id.get(ref_modname)
+                ref_mod: Optional[Mod] = (
+                    mods_by_id.get(ref_mod_id) if ref_mod_id is not None else None
+                )
+                if ref_mod is None and file_expression is not None:
+                    ref_mod = next(
+                        (
+                            candidate
+                            for candidate in mods_by_id.values()
+                            if candidate.metadata.file_name is not None
+                            and candidate.metadata.file_name.casefold()
+                            == file_expression.casefold()
+                        ),
+                        None,
+                    )
 
                 # Ignore conflicts with mods that aren't relevant to us
                 if ref_mod is None:
@@ -917,7 +929,7 @@ class Vortex(ModManager[ProfileInfo]):
 
     @staticmethod
     def __get_variant(vortex_id: str, installation_file_name: str) -> Optional[str]:
-        archive_id: str = installation_file_name.rsplit(".", 1)[0]
+        archive_id: str = clean_fs_string(installation_file_name.rsplit(".", 1)[0])
         if not vortex_id.casefold().startswith(archive_id.casefold()):
             return None
 

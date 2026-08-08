@@ -110,6 +110,40 @@ class TestVortex(BaseTest):
         assert not dip.is_in_game_dir
         assert dip.working_dir is None
 
+    def test_load_conflicts_resolves_file_expression(
+        self,
+        full_vortex_db: MockPlyvelDB,
+        test_fs: FakeFilesystem,
+        vortex_profile_info: ProfileInfo,
+    ) -> None:
+        """Tests conflict rules containing only a file expression are resolved."""
+
+        # given
+        source_id = "Wet and Cold SE v2.4.0-644-2-4-0-1601332084"
+        target_file_name = "Wet and Cold SE - Deutsch-89391-2-4-0-1716634410.zip"
+        rules_key = (f"persistent###mods###skyrimse###{source_id}###rules").encode()
+        raw_data: dict[bytes, bytes] = Utils.get_private_field(
+            full_vortex_db, *TestVortex.RAW_DATA
+        )
+        raw_data[rules_key] = json.dumps(
+            [
+                {
+                    "reference": {"fileExpression": target_file_name},
+                    "type": "before",
+                }
+            ]
+        ).encode()
+        vortex = Vortex()
+        vortex.db_path.mkdir(parents=True, exist_ok=True)
+
+        # when
+        instance: Instance = vortex.load_instance(vortex_profile_info)
+
+        # then
+        source_mod: Mod = self.get_mod_by_name("Wet and Cold SE", instance)
+        target_mod: Mod = self.get_mod_by_name("Wet and Cold SE - German", instance)
+        assert source_mod.mod_conflicts == [target_mod]
+
     def test_create_instance(
         self, test_fs: FakeFilesystem, ready_vortex_db: MockPlyvelDB
     ) -> None:
@@ -279,8 +313,8 @@ class TestVortex(BaseTest):
         dst_profile: Instance = vortex.create_instance(
             profile_info, Path("E:/SteamLibrary/Skyrim Special Edition")
         )
-        archive_name = "Dear Diary Dark Mode-60837-1-1-1-1667594519.7z"
-        archive_id = archive_name.rsplit(".", 1)[0]
+        archive_name = "Dear Diary: Dark Mode-60837-1-1-1-1667594519.7z"
+        archive_id = "Dear Diary Dark Mode-60837-1-1-1-1667594519"
         metadata = Metadata(
             mod_id=60837,
             file_id=1,
@@ -350,6 +384,22 @@ class TestVortex(BaseTest):
         assert loaded_variant.variant == "21x9"
         assert not loaded_variant.enabled
         assert loaded_base.mod_conflicts == [loaded_variant]
+
+        # when
+        limited_profile: Instance = vortex.load_instance(
+            ProfileInfo(
+                display_name="Variant test (variant-test)",
+                game=profile_info.game,
+                id=profile_info.id,
+            ),
+            modname_limit=20,
+        )
+
+        # then
+        limited_variant: Mod = next(
+            mod for mod in limited_profile.mods if mod.variant == "21x9"
+        )
+        assert limited_variant.display_name == "Dear Diary Dark Mode - 21x9"
 
     def test_format_utc_timestamp(self) -> None:
         """
