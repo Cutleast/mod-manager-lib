@@ -874,6 +874,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
 
         mod_folder: Path
         regular_deployment: bool = True
+        root_builder_deployment: bool = False
 
         if mod.mod_type in [Mod.Type.Regular, Mod.Type.Separator]:
             mod_name: str = mod.display_name
@@ -883,7 +884,10 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             meta_ini_path: Path = mod_folder / "meta.ini"
             if mod.deploy_path is not None and mod.deploy_path == Path("."):
                 if instance_data.use_root_builder:
-                    mod_folder /= "Root"
+                    root_builder_deployment = True
+                    file_redirects = ModOrganizer.__get_root_builder_redirects(
+                        mod, file_redirects, instance_data.game.mods_folder
+                    )
                 else:
                     mod_folder = instance.game_folder
                     regular_deployment = False
@@ -928,7 +932,12 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
 
         # Append .mohidden suffix to files in mod.file_conflicts
         for file in mod.file_conflicts:
-            src: Path = mod_folder / file
+            conflict_path: Path = Path(file)
+            if root_builder_deployment:
+                conflict_path = ModOrganizer.__get_root_builder_path(
+                    conflict_path, instance_data.game.mods_folder
+                )
+            src: Path = mod_folder / conflict_path
             dst: Path = src.with_suffix(src.suffix + ".mohidden")
             os.rename(src, dst)
             self.log.debug(
@@ -947,6 +956,41 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             new_mod: Mod = Mod.create_copy(mod)
             new_mod.path = mod_folder
             instance.mods.append(new_mod)
+
+    @staticmethod
+    def __get_root_builder_redirects(
+        mod: Mod, file_redirects: dict[Path, Path], mods_folder: Path
+    ) -> dict[Path, Path]:
+        """Builds redirects for the directory layout expected by Root Builder."""
+
+        redirects: dict[Path, Path] = {}
+        for file in mod.files:
+            actual_path: Path = file_redirects.get(file, file)
+            redirects[file] = ModOrganizer.__get_root_builder_path(
+                actual_path, mods_folder
+            )
+
+        return redirects
+
+    @staticmethod
+    def __get_root_builder_path(file: Path, mods_folder: Path) -> Path:
+        """Places game mod files at the mod root and all other files under Root."""
+
+        # meta.ini describes the MO2 mod and must not be deployed into the game.
+        if len(file.parts) == 1 and file.name.casefold() == "meta.ini":
+            return file
+
+        mods_folder_parts: tuple[str, ...] = mods_folder.parts
+        if not mods_folder_parts:
+            return file
+
+        file_prefix: tuple[str, ...] = file.parts[: len(mods_folder_parts)]
+        if tuple(part.casefold() for part in file_prefix) == tuple(
+            part.casefold() for part in mods_folder_parts
+        ):
+            return Path(*file.parts[len(mods_folder_parts) :])
+
+        return Path("Root") / file
 
     @staticmethod
     def write_meta_ini_file(

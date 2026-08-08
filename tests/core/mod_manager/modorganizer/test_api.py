@@ -380,6 +380,72 @@ class TestModOrganizer(BaseTest):
         assert migrated_overwritten_mod.files == overwritten_mod.files
         assert migrated_overwriting_mod.files == overwriting_mod.files
 
+    def test_install_root_builder_mod_splits_game_and_root_files(
+        self, test_fs: FakeFilesystem
+    ) -> None:
+        """
+        Tests Root Builder places Data files at the mod root and game files in Root.
+        """
+
+        # given
+        mo2 = ModOrganizer()
+        game = GameService.get_game_by_id("skyrimse")
+        instance_path = Path("E:/Modding/Root Builder Test")
+        instance_data = MO2InstanceInfo(
+            display_name="Root Builder Test",
+            game=game,
+            profile="Default",
+            is_global=False,
+            base_folder=instance_path,
+            mods_folder=instance_path / "mods",
+            profiles_folder=instance_path / "profiles",
+            install_mo2=False,
+            use_root_builder=True,
+        )
+        instance: Instance = mo2.create_instance(
+            instance_data, Path("E:/SteamLibrary/Skyrim Special Edition")
+        )
+        source_path = Path("C:/Source/Root Builder Mod")
+        test_fs.create_file(source_path / "meta.ini", contents="[General]\n")
+        test_fs.create_file(source_path / "skse64_loader.exe")
+        test_fs.create_file(source_path / "Data" / "Scripts" / "a.pex")
+        test_fs.create_file(source_path / "redirected" / "interface.swf")
+        test_fs.create_file(source_path / "Data" / "Scripts" / "hidden.pex.mohidden")
+        mod = Mod(
+            display_name="Root Builder Mod",
+            path=source_path,
+            deploy_path=Path("."),
+            metadata=Metadata.create_blank(),
+            installed=True,
+            enabled=True,
+        )
+        mod.file_conflicts[str(Path("Data/Scripts/hidden.pex")).lower()] = mod
+        file_redirects: dict[Path, Path] = mo2.get_actual_files(mod)
+        file_redirects[Path("redirected/interface.swf")] = Path(
+            "Data/interface/interface.swf"
+        )
+
+        # when
+        mo2.install_mod(
+            mod,
+            instance,
+            instance_data,
+            file_redirects=file_redirects,
+            use_hardlinks=False,
+            replace=True,
+        )
+
+        # then
+        mod_folder: Path = instance_data.mods_folder / mod.display_name
+        assert (mod_folder / "meta.ini").is_file()
+        assert not (mod_folder / "Root" / "meta.ini").exists()
+        assert (mod_folder / "Root" / "skse64_loader.exe").is_file()
+        assert (mod_folder / "Scripts" / "a.pex").is_file()
+        assert (mod_folder / "interface" / "interface.swf").is_file()
+        assert (mod_folder / "Scripts" / "hidden.pex.mohidden").is_file()
+        assert not (mod_folder / "Data").exists()
+        assert not (mod_folder / "Root" / "Data").exists()
+
     @pytest.mark.parametrize(
         ("version", "expected_version"),
         [
