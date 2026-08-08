@@ -2,12 +2,14 @@
 Copyright (c) Cutleast
 """
 
+from heapq import heapify, heappop, heappush
 from pathlib import Path
 from typing import Optional
 
 from cutleast_core_lib.core.utilities.filter import get_first_match
 from pydantic import BaseModel
 
+from ..exceptions import CyclicModConflictError
 from .mod import Mod
 from .tool import Tool
 
@@ -127,6 +129,9 @@ class Instance(BaseModel):
             order_matters (Optional[bool], optional):
                 Whether the mods have a fixed order. Defaults to the instance's default.
 
+        Raises:
+            CyclicModConflictError: If the mod conflict rules contain a cycle.
+
         Returns:
             list[Mod]: The sorted list of mods
         """
@@ -137,25 +142,94 @@ class Instance(BaseModel):
         if order_matters:
             return self.mods.copy()
 
-        new_loadorder: list[Mod] = self.mods.copy()
-        new_loadorder.sort(key=lambda m: m.display_name)
+        mod_indices: dict[int, int] = {
+            id(mod): index for index, mod in enumerate(self.mods)
+        }
+        resolved_conflicts: dict[int, Optional[int]] = {}
+        successors: list[set[int]] = [set() for _ in self.mods]
+        predecessors: list[set[int]] = [set() for _ in self.mods]
 
-        for mod in filter(lambda m: m.mod_conflicts, self.mods):
-            if mod.mod_conflicts:
-                old_index = index = new_loadorder.index(mod)
+        for source_index, mod in enumerate(self.mods):
+            for conflict in mod.mod_conflicts:
+                conflict_id = id(conflict)
+                if conflict_id not in resolved_conflicts:
+                    target_index = mod_indices.get(conflict_id)
+                    if target_index is None:
+                        try:
+                            installed_mod = self.get_installed_mod(conflict)
+                            target_index = mod_indices[id(installed_mod)]
+                        except ValueError:
+                            target_index = None
 
-                # Get smallest index of all overwriting mods
-                overwriting_mods = [
-                    new_loadorder.index(self.get_installed_mod(overwriting_mod))
-                    for overwriting_mod in mod.mod_conflicts
-                    if self.is_mod_installed(overwriting_mod)
-                ]
-                index = min(overwriting_mods, default=old_index)
+                    resolved_conflicts[conflict_id] = target_index
 
-                if old_index > index:
-                    new_loadorder.insert(index, new_loadorder.pop(old_index))
+                target_index = resolved_conflicts[conflict_id]
+                if target_index is None or target_index in successors[source_index]:
+                    continue
 
-        return new_loadorder
+                successors[source_index].add(target_index)
+                predecessors[target_index].add(source_index)
+
+        indegrees: list[int] = [len(nodes) for nodes in predecessors]
+        ready: list[tuple[str, int]] = [
+            (mod.display_name, index)
+            for index, mod in enumerate(self.mods)
+            if indegrees[index] == 0
+        ]
+        heapify(ready)
+        loadorder: list[Mod] = []
+
+        while ready:
+            _, source_index = heappop(ready)
+            loadorder.append(self.mods[source_index])
+
+            for target_index in successors[source_index]:
+                indegrees[target_index] -= 1
+                if indegrees[target_index] == 0:
+                    target = self.mods[target_index]
+                    heappush(ready, (target.display_name, target_index))
+
+        if len(loadorder) != len(self.mods):
+            cycle = self.__find_conflict_cycle(predecessors, indegrees)
+            raise CyclicModConflictError(
+                [self.mods[index].display_name for index in cycle]
+            )
+
+        return loadorder
+
+    def __find_conflict_cycle(
+        self, predecessors: list[set[int]], indegrees: list[int]
+    ) -> list[int]:
+        """
+        Extracts a directed cycle from the nodes left by topological sorting.
+
+        Args:
+            predecessors (list[set[int]]): Predecessors for every mod index.
+            indegrees (list[int]): Remaining indegrees after topological sorting.
+
+        Returns:
+            list[int]: Mod indices forming a cycle, including the repeated first index.
+        """
+
+        remaining: set[int] = {
+            index for index, indegree in enumerate(indegrees) if indegree > 0
+        }
+        current = min(
+            remaining, key=lambda index: (self.mods[index].display_name, index)
+        )
+        positions: dict[int, int] = {}
+        reverse_path: list[int] = []
+
+        while current not in positions:
+            positions[current] = len(reverse_path)
+            reverse_path.append(current)
+            current = min(
+                predecessors[current] & remaining,
+                key=lambda index: (self.mods[index].display_name, index),
+            )
+
+        reverse_cycle = reverse_path[positions[current] :] + [current]
+        return list(reversed(reverse_cycle))
 
     @property
     def size(self) -> int:
