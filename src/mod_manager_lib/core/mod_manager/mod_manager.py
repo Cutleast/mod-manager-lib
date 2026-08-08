@@ -7,7 +7,7 @@ import os
 import shutil
 from abc import abstractmethod
 from pathlib import Path
-from typing import Optional, override
+from typing import Generic, Optional, TypeVar, override
 
 from cutleast_core_lib.core.filesystem.file import File
 from cutleast_core_lib.core.multithreading.progress import (
@@ -25,8 +25,10 @@ from ..instance.mod import Mod
 from ..instance.tool import Tool
 from .instance_info import InstanceInfo
 
+InstanceInfoType = TypeVar("InstanceInfoType", bound=InstanceInfo)
 
-class ModManager[I: InstanceInfo](QObject):
+
+class ModManager(QObject, Generic[InstanceInfoType]):
     """
     Abstract class for mod managers.
     """
@@ -55,7 +57,7 @@ class ModManager[I: InstanceInfo](QObject):
     @abstractmethod
     def load_instance(
         self,
-        instance_data: I,
+        instance_data: InstanceInfoType,
         modname_limit: int = 255,
         file_blacklist: Optional[list[str]] = None,
         game_folder: Optional[Path] = None,
@@ -66,7 +68,7 @@ class ModManager[I: InstanceInfo](QObject):
         Loads and returns the mod instance with the given name.
 
         Args:
-            instance_data (I): The data of the mod instance.
+            instance_data (InstanceInfoType): The data of the mod instance.
             modname_limit (int, optional):
                 A character limit for mod names. Defaults to 255.
             file_blacklist (Optional[list[str]], optional):
@@ -91,7 +93,7 @@ class ModManager[I: InstanceInfo](QObject):
     @abstractmethod
     def load_mods(
         self,
-        instance_data: I,
+        instance_data: InstanceInfoType,
         game_folder: Path,
         modname_limit: int = 255,
         file_blacklist: Optional[list[str]] = None,
@@ -102,7 +104,7 @@ class ModManager[I: InstanceInfo](QObject):
         Loads and returns a list of mods for the given instance name.
 
         Args:
-            instance_data (I): The data of the mod instance.
+            instance_data (InstanceInfoType): The data of the mod instance.
             game_folder (Path): The game folder of the instance.
             modname_limit (int, optional):
                 A character limit for mod names. Defaults to 255.
@@ -121,7 +123,7 @@ class ModManager[I: InstanceInfo](QObject):
     @abstractmethod
     def load_tools(
         self,
-        instance_data: I,
+        instance_data: InstanceInfoType,
         mods: list[Mod],
         game_folder: Path,
         file_blacklist: Optional[list[str]] = None,
@@ -131,7 +133,7 @@ class ModManager[I: InstanceInfo](QObject):
         Loads and returns a list of tools for the given instance.
 
         Args:
-            instance_data (I): The data of the mod instance.
+            instance_data (InstanceInfoType): The data of the mod instance.
             mods (list[Mod]): The list of already loaded mods.
             game_folder (Path): The game folder of the instance.
             file_blacklist (Optional[list[str]], optional):
@@ -224,18 +226,18 @@ class ModManager[I: InstanceInfo](QObject):
 
         return {}
 
-    def prepare_instance(self, instance_data: I) -> None:
+    def prepare_instance(self, instance_data: InstanceInfoType) -> None:
         """
         Prepares a mod instance for modifications.
 
         Args:
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
         """
 
     @abstractmethod
     def create_instance(
         self,
-        instance_data: I,
+        instance_data: InstanceInfoType,
         game_folder: Path,
         update_callback: Optional[UpdateCallback] = None,
     ) -> Instance:
@@ -243,7 +245,7 @@ class ModManager[I: InstanceInfo](QObject):
         Creates an instance in this mod manager.
 
         Args:
-            instance_data (Instance_data): The customized instance data to create.
+            instance_data (InstanceInfoType): The customized instance data to create.
             game_folder (Path): The game folder to use for the created instance.
             update_callback (Optional[UpdateCallback], optional):
                 Optional update callback for progress updates. Defaults to None.
@@ -260,7 +262,7 @@ class ModManager[I: InstanceInfo](QObject):
         self,
         mod: Mod,
         instance: Instance,
-        instance_data: I,
+        instance_data: InstanceInfoType,
         file_redirects: dict[Path, Path],
         use_hardlinks: bool,
         replace: bool,
@@ -273,7 +275,7 @@ class ModManager[I: InstanceInfo](QObject):
         Args:
             mod (Mod): The mod to install.
             instance (Instance): The instance to install the mod to.
-            instance_data (I): The data of the instance above.
+            instance_data (InstanceInfoType): The data of the instance above.
             file_redirects (dict[Path, Path]): A dict of file redirects.
             use_hardlinks (bool): Whether to use hardlinks if possible.
             replace (bool): Whether to replace existing files.
@@ -288,7 +290,7 @@ class ModManager[I: InstanceInfo](QObject):
         self,
         tool: Tool,
         instance: Instance,
-        instance_data: I,
+        instance_data: InstanceInfoType,
         use_hardlinks: bool,
         replace: bool,
         blacklist: Optional[list[str]] = None,
@@ -300,7 +302,7 @@ class ModManager[I: InstanceInfo](QObject):
         Args:
             tool (Tool): The tool to add.
             instance (Instance): The instance to add the tool to.
-            instance_data (I): The data of the instance above.
+            instance_data (InstanceInfoType): The data of the instance above.
             use_hardlinks (bool): Whether to use hardlinks if possible.
             replace (bool): Whether to replace existing files.
             blacklist (Optional[list[str]], optional):
@@ -381,13 +383,15 @@ class ModManager[I: InstanceInfo](QObject):
             else:
                 shutil.copyfile(src_path, dst_path)
 
-    def get_ini_files(self, instance: Instance, instance_data: I) -> list[Path]:
+    def get_ini_files(
+        self, instance: Instance, instance_data: InstanceInfoType
+    ) -> list[Path]:
         """
         Returns a list of INI files belonging to an instance.
 
         Args:
             instance (Instance): The instance.
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
 
         Returns:
             list[Path]: The list of INI files.
@@ -398,13 +402,15 @@ class ModManager[I: InstanceInfo](QObject):
 
         return [(ini_dir / file) for file in ini_filenames]
 
-    def get_ini_dir(self, instance_data: I, separate_ini_files: bool) -> Path:
+    def get_ini_dir(
+        self, instance_data: InstanceInfoType, separate_ini_files: bool
+    ) -> Path:
         """
         Returns path to folder for INI files, either game's INI folder or
         instance's INI folder.
 
         Args:
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
             separate_ini_files (bool): Whether to use separate INI folders.
 
         Returns:
@@ -417,12 +423,12 @@ class ModManager[I: InstanceInfo](QObject):
         return instance_data.game.inidir
 
     @abstractmethod
-    def get_instance_ini_dir(self, instance_data: I) -> Path:
+    def get_instance_ini_dir(self, instance_data: InstanceInfoType) -> Path:
         """
         Returns the path to the instance's INI folder.
 
         Args:
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
 
         Returns:
             Path: The path to the instance's INI folder.
@@ -431,7 +437,7 @@ class ModManager[I: InstanceInfo](QObject):
     def import_ini_files(
         self,
         files: list[Path],
-        dst_instance_data: I,
+        dst_instance_data: InstanceInfoType,
         separate_ini_files: bool,
         use_hardlinks: bool,
         replace: bool,
@@ -442,7 +448,7 @@ class ModManager[I: InstanceInfo](QObject):
 
         Args:
             files (list[Path]): The INI files to migrate.
-            dst_instance_data (I): The data of the destination instance.
+            dst_instance_data (InstanceInfoType): The data of the destination instance.
             separate_ini_files (bool): Whether to use separate INI folders.
             use_hardlinks (bool): Whether to use hardlinks if possible.
             replace (bool): Whether to replace existing files.
@@ -489,12 +495,12 @@ class ModManager[I: InstanceInfo](QObject):
             else:
                 shutil.copyfile(file, dst_path)
 
-    def get_additional_files(self, instance_data: I) -> list[Path]:
+    def get_additional_files(self, instance_data: InstanceInfoType) -> list[Path]:
         """
         Returns a list of additional files to belonging to an instance.
 
         Args:
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
 
         Returns:
             list[Path]: The list of additional files.
@@ -512,7 +518,7 @@ class ModManager[I: InstanceInfo](QObject):
     def import_additional_files(
         self,
         files: list[Path],
-        dst_instance_data: I,
+        dst_instance_data: InstanceInfoType,
         use_hardlinks: bool,
         replace: bool,
         update_callback: Optional[UpdateCallback] = None,
@@ -522,7 +528,7 @@ class ModManager[I: InstanceInfo](QObject):
 
         Args:
             files (list[Path]): The list of additional files.
-            dst_instance_data (I): The data of the destination instance.
+            dst_instance_data (InstanceInfoType): The data of the destination instance.
             use_hardlinks (bool): Whether to use hardlinks if possible.
             replace (bool): Whether to replace existing files.
             update_callback (Optional[UpdateCallback], optional):
@@ -565,49 +571,52 @@ class ModManager[I: InstanceInfo](QObject):
                 shutil.copyfile(file, dst_path)
 
     @abstractmethod
-    def get_additional_files_folder(self, instance_data: I) -> Path:
+    def get_additional_files_folder(self, instance_data: InstanceInfoType) -> Path:
         """
         Gets the path for the additional files of the specified instance.
 
         Args:
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
 
         Returns:
             Path: The path for the additional files.
         """
 
     def finalize_instance(
-        self, instance: Instance, instance_data: I, activate_instance: bool
+        self,
+        instance: Instance,
+        instance_data: InstanceInfoType,
+        activate_instance: bool,
     ) -> None:
         """
         Finalizes a mod instance.
 
         Args:
             instance (Instance): The mod instance to finalize.
-            instance_data (I): The data of the mod instance to finalize.
+            instance_data (InstanceInfoType): The data of the mod instance to finalize.
             activate_instance (bool):
                 Whether to activate the instance (if supported by the mod manager).
         """
 
     @abstractmethod
-    def get_mods_path(self, instance_data: I) -> Path:
+    def get_mods_path(self, instance_data: InstanceInfoType) -> Path:
         """
         Returns the path to the specified instance's mods folder.
 
         Args:
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
 
         Returns:
             Path: The path to the mods folder.
         """
 
     @abstractmethod
-    def is_instance_existing(self, instance_data: I) -> bool:
+    def is_instance_existing(self, instance_data: InstanceInfoType) -> bool:
         """
         Checks if the specified instance exists.
 
         Args:
-            instance_data (I): The data of the instance.
+            instance_data (InstanceInfoType): The data of the instance.
 
         Returns:
             bool: Whether the instance exists.

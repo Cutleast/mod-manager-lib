@@ -730,8 +730,8 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
     ) -> Path:
         self.log.info("Downloading ModOrganizer...")
 
-        return Downloader.single_download(
-            url=ModOrganizer.DOWNLOAD_URL,
+        return Downloader().download(
+            download_url=ModOrganizer.DOWNLOAD_URL,
             dest_folder=dest,
             progress_callback=update_callback,
         )

@@ -15,16 +15,16 @@ from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
 from mod_manager_lib.core.mod_manager.mod_manager import ModManager
 from mod_manager_lib.core.mod_manager.service import ModManagerService
 
-I = TypeVar("I", bound=InstanceInfo)
-M = TypeVar("M", bound=ModManager)
+InstanceInfoType = TypeVar("InstanceInfoType", bound=InstanceInfo)
+ModManagerType = TypeVar("ModManagerType", bound=ModManager)
 
 
-class BaseSelectorWidget(QWidget, Generic[I, M]):
+class BaseSelectorWidget(QWidget, Generic[InstanceInfoType, ModManagerType]):
     """
     Base class for selecting instances from a preselected mod manager.
     """
 
-    _api: M
+    _api: ModManagerType
     """The API of the corresponding mod manager."""
 
     _instance_names: list[str]
@@ -51,7 +51,8 @@ class BaseSelectorWidget(QWidget, Generic[I, M]):
         super().__init__()
 
         self._api = cast(
-            M, ModManagerService.get_mod_manager(self.__class__.get_mod_manager())
+            ModManagerType,
+            ModManagerService.get_mod_manager(self.__class__.get_mod_manager()),
         )
         self._instance_names = instance_names if instance_names is not None else []
 
@@ -98,7 +99,7 @@ class BaseSelectorWidget(QWidget, Generic[I, M]):
         """
 
     @abstractmethod
-    def get_instance(self, game: Game) -> I:
+    def get_instance(self, game: Game) -> InstanceInfoType:
         """
         Returns the data for the selected instance and game.
 
@@ -106,16 +107,16 @@ class BaseSelectorWidget(QWidget, Generic[I, M]):
             game (Game): The game for which the selected instance belongs to.
 
         Returns:
-            I: The data for the selected instance
+            InstanceInfoType: The data for the selected instance
         """
 
     @abstractmethod
-    def set_instance(self, instance_data: I) -> None:
+    def set_instance(self, instance_data: InstanceInfoType) -> None:
         """
         Sets the currently selected instance.
 
         Args:
-            instance_data (I): The data for the selected instance.
+            instance_data (InstanceInfoType): The data for the selected instance.
         """
 
     @abstractmethod
