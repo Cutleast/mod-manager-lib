@@ -144,6 +144,57 @@ class TestVortex(BaseTest):
         target_mod: Mod = self.get_mod_by_name("Wet and Cold SE - German", instance)
         assert source_mod.mod_conflicts == [target_mod]
 
+    def test_load_conflicts_skips_ambiguous_file_expression(
+        self,
+        full_vortex_db: MockPlyvelDB,
+        test_fs: FakeFilesystem,
+        vortex_profile_info: ProfileInfo,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Tests file expressions matching multiple variants are ignored."""
+
+        # given
+        source_id = "Wet and Cold SE v2.4.0-644-2-4-0-1601332084"
+        target_id = "Wet and Cold SE - Deutsch-89391-2-4-0-1716634410"
+        variant_id = f"{target_id}-alternate"
+        target_file_name = "Wet and Cold SE - Deutsch-89391-2-4-0-1716634410.zip"
+        rules_key = (f"persistent###mods###skyrimse###{source_id}###rules").encode()
+        target_prefix = f"persistent###mods###skyrimse###{target_id}###".encode()
+        variant_prefix = f"persistent###mods###skyrimse###{variant_id}###".encode()
+        raw_data: dict[bytes, bytes] = Utils.get_private_field(
+            full_vortex_db, *TestVortex.RAW_DATA
+        )
+        raw_data[rules_key] = json.dumps(
+            [
+                {
+                    "reference": {"fileExpression": target_file_name},
+                    "type": "before",
+                }
+            ]
+        ).encode()
+        for key, value in list(raw_data.items()):
+            if key.startswith(target_prefix):
+                raw_data[variant_prefix + key.removeprefix(target_prefix)] = value
+        raw_data[variant_prefix + b"id"] = json.dumps(variant_id).encode()
+        raw_data[variant_prefix + b"installationPath"] = json.dumps(variant_id).encode()
+        profile_prefix = (
+            f"persistent###profiles###{vortex_profile_info.id}###modState###"
+            f"{variant_id}###"
+        ).encode()
+        raw_data[profile_prefix + b"enabled"] = b"true"
+        test_fs.create_dir(Path("E:/Modding/Vortex/skyrimse") / variant_id)
+        vortex = Vortex()
+        vortex.db_path.mkdir(parents=True, exist_ok=True)
+
+        # when
+        instance: Instance = vortex.load_instance(vortex_profile_info)
+
+        # then
+        source_mod: Mod = self.get_mod_by_name("Wet and Cold SE", instance)
+        assert source_mod.mod_conflicts == []
+        assert "Ambiguous fileExpression" in caplog.text
+        assert target_file_name in caplog.text
+
     def test_create_instance(
         self, test_fs: FakeFilesystem, ready_vortex_db: MockPlyvelDB
     ) -> None:

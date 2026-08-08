@@ -354,16 +354,21 @@ class Vortex(ModManager[ProfileInfo]):
                     mods_by_id.get(ref_mod_id) if ref_mod_id is not None else None
                 )
                 if ref_mod is None and file_expression is not None:
-                    ref_mod = next(
-                        (
-                            candidate
-                            for candidate in mods_by_id.values()
-                            if candidate.metadata.file_name is not None
-                            and candidate.metadata.file_name.casefold()
-                            == file_expression.casefold()
-                        ),
-                        None,
-                    )
+                    ref_mod_candidates: list[Mod] = [
+                        candidate
+                        for candidate in mods_by_id.values()
+                        if candidate.metadata.file_name is not None
+                        and candidate.metadata.file_name.casefold()
+                        == file_expression.casefold()
+                    ]
+                    if len(ref_mod_candidates) == 1:
+                        ref_mod = ref_mod_candidates[0]
+                    elif len(ref_mod_candidates) > 1:
+                        self.log.warning(
+                            "Failed to process mod conflict rule for mod "
+                            f"'{mod.display_name}': Ambiguous fileExpression "
+                            f"'{file_expression}' matches multiple mods."
+                        )
 
                 # Ignore conflicts with mods that aren't relevant to us
                 if ref_mod is None:
