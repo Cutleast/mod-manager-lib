@@ -257,6 +257,7 @@ class TestInstance(BaseTest):
 
         # then
         message = str(exc_info.value)
+        assert exc_info.value.cycle == ["A", "B", "C", "A"]
         assert "A → B → C → A" in message
         assert "Vortex" in message
 

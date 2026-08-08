@@ -32,7 +32,8 @@ class CyclicModConflictError(LocalizedException):
             cycle (list[str]): Mod names forming the detected cycle.
         """
 
-        super().__init__(" → ".join(cycle))
+        self.cycle: list[str] = cycle.copy()
+        super().__init__(" → ".join(self.cycle))
 
     @override
     def getLocalizedMessage(self) -> str:
