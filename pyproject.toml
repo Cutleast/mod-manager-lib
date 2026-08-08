@@ -3,7 +3,7 @@ name = "mod-manager-lib"
 version = "1.0.0"
 description = "A core library for interfacing with mod managers like Mod Organizer 2 and Vortex."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 authors = [{ name = "Cutleast", email = "cutleast@gmail.com" }]
 license = { file = "LICENSE" }
 dependencies = [
