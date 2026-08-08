@@ -20,8 +20,8 @@ jobs:
 
       - name: Set up virtual environment with uv
         run: |
-          uv add git+https://github.com/Cutleast/cutleast-core-lib
-          uv sync
+          uv add --frozen --no-workspace git+https://github.com/Cutleast/cutleast-core-lib@e56ec58eee246a8e5a9c20140bcc07003d4d7ad6
+          uv sync --frozen
 
       - name: Run Ruff
         run: |
