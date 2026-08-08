@@ -12,6 +12,7 @@ from cutleast_core_lib.test.utils import Utils
 from mod_manager_lib.core.game import Game
 from mod_manager_lib.core.game_service import GameService
 from mod_manager_lib.core.instance.instance import Instance
+from mod_manager_lib.core.instance.metadata import Metadata
 from mod_manager_lib.core.instance.mod import Mod
 from mod_manager_lib.core.instance.tool import Tool
 from mod_manager_lib.core.mod_manager.vortex.api import Vortex
@@ -259,6 +260,96 @@ class TestVortex(BaseTest):
         # then
         dst_profile = vortex.load_instance(profile_info)
         assert dst_profile.mods[-1].metadata == mod.metadata
+
+    def test_install_and_load_mod_variants(
+        self, test_fs: FakeFilesystem, ready_vortex_db: MockPlyvelDB
+    ) -> None:
+        """
+        Tests variants installed from the same archive remain distinct in Vortex.
+        """
+
+        # given
+        vortex = Vortex()
+        vortex.db_path.mkdir(parents=True, exist_ok=True)
+        profile_info = ProfileInfo(
+            display_name="Variant test",
+            game=GameService.get_game_by_id("skyrimse"),
+            id="variant-test",
+        )
+        dst_profile: Instance = vortex.create_instance(
+            profile_info, Path("E:/SteamLibrary/Skyrim Special Edition")
+        )
+        archive_name = "Dear Diary Dark Mode-60837-1-1-1-1667594519.7z"
+        archive_id = archive_name.rsplit(".", 1)[0]
+        metadata = Metadata(
+            mod_id=60837,
+            file_id=1,
+            version="1.1.1",
+            file_name=archive_name,
+            game_id="skyrimspecialedition",
+        )
+        base_path = Path("C:/Source/Dear Diary Dark Mode")
+        variant_path = Path("C:/Source/Dear Diary Dark Mode - 21x9")
+        test_fs.create_file(base_path / "interface" / "base.txt")
+        test_fs.create_file(variant_path / "interface" / "widescreen.txt")
+        base_mod = Mod(
+            display_name="Dear Diary Dark Mode",
+            path=base_path,
+            deploy_path=None,
+            metadata=metadata,
+            installed=True,
+            enabled=True,
+        )
+        variant_mod = Mod(
+            display_name="Dear Diary Dark Mode",
+            path=variant_path,
+            deploy_path=None,
+            metadata=metadata,
+            variant="21x9",
+            installed=True,
+            enabled=False,
+        )
+        base_mod.mod_conflicts = [variant_mod]
+
+        # when
+        for mod in [base_mod, variant_mod]:
+            vortex.install_mod(
+                mod,
+                dst_profile,
+                profile_info,
+                file_redirects={},
+                use_hardlinks=False,
+                replace=True,
+            )
+        vortex.finalize_instance(dst_profile, profile_info, activate_instance=False)
+        loaded_profile: Instance = vortex.load_instance(
+            ProfileInfo(
+                display_name="Variant test (variant-test)",
+                game=profile_info.game,
+                id=profile_info.id,
+            )
+        )
+
+        # then
+        database: LevelDB = Utils.get_private_field(vortex, *TestVortex.DATABASE)
+        mods_data: dict[str, Any] = database.get_section(
+            "persistent###mods###skyrimse###"
+        )["persistent"]["mods"]["skyrimse"]
+        variant_id: str = f"{archive_id}-21x9"
+        assert set(mods_data) == {archive_id, variant_id}
+        assert mods_data[archive_id]["attributes"]["fileName"] == archive_name
+        assert mods_data[variant_id]["attributes"]["fileName"] == archive_name
+        assert (Path("E:/Modding/Vortex/skyrimse") / archive_id).is_dir()
+        assert (Path("E:/Modding/Vortex/skyrimse") / variant_id).is_dir()
+
+        loaded_base: Mod = self.get_mod_by_name("Dear Diary Dark Mode", loaded_profile)
+        loaded_variant: Mod = self.get_mod_by_name(
+            "Dear Diary Dark Mode - 21x9", loaded_profile
+        )
+        assert loaded_base.variant is None
+        assert loaded_variant.variant == "21x9"
+        assert not loaded_variant.enabled
+        assert loaded_base.mod_conflicts == [loaded_variant]
 
     def test_format_utc_timestamp(self) -> None:
         """

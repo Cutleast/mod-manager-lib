@@ -418,6 +418,62 @@ class TestModOrganizer(BaseTest):
         meta_ini_data: IniData = IniFile.load(meta_ini_path)
         assert meta_ini_data["General"]["version"] == expected_version
 
+    def test_load_mods_assigns_variants_for_shared_archive(
+        self, test_fs: FakeFilesystem, mo2_instance_info: MO2InstanceInfo
+    ) -> None:
+        """
+        Tests that MO2 mods from the same archive receive distinct variants.
+        """
+
+        # given
+        mo2 = ModOrganizer()
+        archive_name = "Dear Diary Dark Mode-60837-1-1-1-1667594519.7z"
+        mod_names: list[str] = [
+            "Dear Diary Dark Mode",
+            "Dear Diary Dark Mode - 21x9",
+        ]
+        metadata = Metadata(
+            mod_id=60837,
+            file_id=1,
+            version="1.1.1",
+            file_name=archive_name,
+            game_id="skyrimspecialedition",
+        )
+        for mod_name in mod_names:
+            mod_folder: Path = mo2_instance_info.mods_folder / mod_name
+            mod_folder.mkdir()
+            ModOrganizer.write_meta_ini_file(
+                mod_folder / "meta.ini", metadata, mo2_instance_info.game
+            )
+            test_fs.create_file(mod_folder / "interface" / f"{mod_name}.txt")
+
+        modlist_path: Path = (
+            mo2_instance_info.profiles_folder
+            / mo2_instance_info.profile
+            / "modlist.txt"
+        )
+        modlist_path.write_text(
+            modlist_path.read_text()
+            + "\n"
+            + "\n".join(f"+{name}" for name in mod_names)
+        )
+
+        # when
+        mods: list[Mod] = mo2.load_mods(
+            mo2_instance_info,
+            Path("E:/SteamLibrary/Skyrim Special Edition"),
+            load_conflicts=False,
+        )
+
+        # then
+        base_mod: Mod = next(mod for mod in mods if mod.display_name == mod_names[0])
+        variant_mod: Mod = next(mod for mod in mods if mod.display_name == mod_names[1])
+        assert base_mod.metadata.file_name == archive_name
+        assert variant_mod.metadata.file_name == archive_name
+        assert base_mod.variant is None
+        assert variant_mod.variant == "21x9"
+        assert Mod.create_copy(variant_mod).variant == "21x9"
+
     def test_install_mod_with_separator(
         self, test_fs: FakeFilesystem, instance: Instance
     ) -> None:

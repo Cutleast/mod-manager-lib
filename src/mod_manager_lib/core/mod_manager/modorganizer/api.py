@@ -321,6 +321,8 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             )
             mods.append(mod)
 
+        ModOrganizer.__assign_variants(mods)
+
         # Load overwrite folder as mod
         overwrite_folder: Path = ModOrganizer.get_overwrite_folder(mo2_ini_path)
         if overwrite_folder.is_dir() and os.listdir(overwrite_folder):
@@ -359,6 +361,46 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             )
 
         return mods
+
+    @staticmethod
+    def __assign_variants(mods: list[Mod]) -> None:
+        """Assigns stable variants to mods sharing an installation archive."""
+
+        mods_by_archive: dict[str, list[Mod]] = {}
+        for mod in mods:
+            if mod.metadata.file_name:
+                mods_by_archive.setdefault(
+                    mod.metadata.file_name.casefold(), []
+                ).append(mod)
+
+        for matching_mods in mods_by_archive.values():
+            if len(matching_mods) < 2:
+                continue
+
+            base_mod: Mod = min(matching_mods, key=lambda mod: len(mod.display_name))
+            used_variants: set[str] = set()
+            for index, mod in enumerate(matching_mods, start=1):
+                if mod is base_mod:
+                    continue
+
+                if mod.display_name.casefold().startswith(
+                    base_mod.display_name.casefold()
+                ):
+                    variant: str = mod.display_name[len(base_mod.display_name) :].strip(
+                        "-_. "
+                    )
+                else:
+                    variant = mod.display_name.strip("-_. ")
+
+                variant = clean_fs_string(variant) or f"variant-{index}"
+                unique_variant: str = variant
+                suffix: int = 2
+                while unique_variant.casefold() in used_variants:
+                    unique_variant = f"{variant}-{suffix}"
+                    suffix += 1
+
+                mod.variant = unique_variant
+                used_variants.add(unique_variant.casefold())
 
     def parse_meta_ini(self, meta_ini_path: Path, default_game: Game) -> Metadata:
         """

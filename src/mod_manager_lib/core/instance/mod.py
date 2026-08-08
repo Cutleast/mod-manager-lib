@@ -42,6 +42,11 @@ class Mod(BaseModel):
     Metadata of the mod.
     """
 
+    variant: Optional[str] = None
+    """
+    Optional installation variant when multiple mods originate from the same archive.
+    """
+
     installed: bool
     """
     If the mod is installed. When migrating, this also indicates whether the mod is
@@ -131,6 +136,7 @@ class Mod(BaseModel):
             path=mod.path,
             deploy_path=mod.deploy_path,
             metadata=mod.metadata,
+            variant=mod.variant,
             installed=mod.installed,
             enabled=mod.enabled,
             mod_type=mod.mod_type,

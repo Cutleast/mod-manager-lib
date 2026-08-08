@@ -205,6 +205,7 @@ class Vortex(ModManager[ProfileInfo]):
         staging_folder: Path = self.__get_staging_folder(game)
 
         mods: list[Mod] = []
+        mods_by_id: dict[str, Mod] = {}
         conflict_rules: dict[Mod, list[dict]] = {}
         file_overrides: dict[Mod, list[str]] = {}
         for m, modname in enumerate(modnames):
@@ -234,9 +235,14 @@ class Vortex(ModManager[ProfileInfo]):
                 or mod_meta_data.get("logicalFileName")
                 or mod_meta_data.get("modName")
                 or modname
-            )[:modname_limit].strip("-_. ")  # Limit mod name as it can get very long
+            )
             mod_path: Path = staging_folder / moddata.get("installationPath", modname)
             file_name: str = mod_meta_data.get("fileName", mod_path.name)
+            variant: Optional[str] = Vortex.__get_variant(modname, file_name)
+            if variant and not display_name.casefold().endswith(variant.casefold()):
+                display_name += f" - {variant}"
+            # Limit mod name as it can get very long.
+            display_name = display_name[:modname_limit].strip("-_. ")
 
             deploy_path: Optional[Path] = None
             modtype: Optional[str] = moddata.get("type") or None
@@ -298,10 +304,12 @@ class Vortex(ModManager[ProfileInfo]):
                     file_name=file_name,
                     game_id=dl_game_id,
                 ),
+                variant=variant,
                 installed=True,
                 enabled=mod_state_data.get(modname, {}).get("enabled", False),
             )
             mods.append(mod)
+            mods_by_id[modname] = mod
             rules: list[dict] = moddata.get("rules", [])
             if rules:
                 conflict_rules[mod] = rules
@@ -310,7 +318,7 @@ class Vortex(ModManager[ProfileInfo]):
                 file_overrides[mod] = overrides
 
         if load_conflicts:
-            self.__process_conflict_rules(mods, conflict_rules)
+            self.__process_conflict_rules(mods_by_id, conflict_rules)
 
             mod_overrides: dict[Mod, list[Mod]] = self.get_reversed_mod_conflicts(mods)
             self.__process_file_overrides(
@@ -322,15 +330,12 @@ class Vortex(ModManager[ProfileInfo]):
         return mods
 
     def __process_conflict_rules(
-        self, mods: list[Mod], conflict_rules: dict[Mod, list[dict]]
+        self, mods_by_id: dict[str, Mod], conflict_rules: dict[Mod, list[dict]]
     ) -> None:
         self.log.info(f"Processing conflict rules for {len(conflict_rules)} mod(s)...")
-        mods_by_file_name: dict[str, Mod] = {
-            self.__get_unique_file_name(mod).rsplit(".", 1)[0]: mod for mod in mods
-        }
         mod_overwrites: dict[Mod, list[Mod]] = {}
 
-        for mod in mods:
+        for mod in mods_by_id.values():
             rules: list[dict[str, dict | str]] = conflict_rules.get(mod, [])
 
             for rule in rules:
@@ -346,7 +351,7 @@ class Vortex(ModManager[ProfileInfo]):
                     )
                     continue
 
-                ref_mod: Optional[Mod] = mods_by_file_name.get(ref_modname)
+                ref_mod: Optional[Mod] = mods_by_id.get(ref_modname)
 
                 # Ignore conflicts with mods that aren't relevant to us
                 if ref_mod is None:
@@ -584,20 +589,21 @@ class Vortex(ModManager[ProfileInfo]):
         game_id: str = instance_data.game.id.lower()
         staging_folder: Path = self.__get_staging_folder(instance_data.game)
 
-        file_name: str = self.__get_unique_file_name(mod).rsplit(".", 1)[0]
-        mod_folder: Path = staging_folder / file_name
-        db_prefix: str = f"persistent###mods###{game_id}###{file_name}###"
+        installation_file_name: str = self.__get_installation_file_name(mod)
+        vortex_id: str = self.__get_vortex_id(mod)
+        mod_folder: Path = staging_folder / vortex_id
+        db_prefix: str = f"persistent###mods###{game_id}###{vortex_id}###"
         db_mod_data: dict[str, Any] = (
             self.__level_db.get_section(db_prefix)
             .get("persistent", {})
             .get("mods", {})
             .get(game_id, {})
-            .get(file_name, {})
+            .get(vortex_id, {})
         )
 
         if not db_mod_data:
             logical_file_name: str = Vortex.get_logical_file_name(
-                self.__get_unique_file_name(mod), mod.metadata.mod_id or 0
+                installation_file_name, mod.metadata.mod_id or 0
             )
             source: str = "nexus" if mod.metadata.mod_id else "other"
             modtype: Optional[str] = "dinput" if mod.deploy_path else None
@@ -619,15 +625,15 @@ class Vortex(ModManager[ProfileInfo]):
                     "customFileName": mod.display_name,
                     "downloadGame": dl_game_id,
                     "installTime": Vortex.format_utc_timestamp(time.time()),
-                    "fileName": self.__get_unique_file_name(mod),
+                    "fileName": installation_file_name,
                     "fileId": mod.metadata.file_id,
                     "modId": mod.metadata.mod_id,
                     "logicalFileName": logical_file_name,
                     "version": mod.metadata.version,
                     "source": source,
                 },
-                "id": file_name,
-                "installationPath": file_name,
+                "id": vortex_id,
+                "installationPath": vortex_id,
                 "state": "installed",
                 "type": modtype,
             }
@@ -648,11 +654,9 @@ class Vortex(ModManager[ProfileInfo]):
         rules: list[dict[str, Any]] = db_mod_data.get("rules", [])
         # Check for rules
         for overwriting_mod in mod.mod_conflicts:
-            overwriting_mod_filename: str = self.__get_unique_file_name(
-                overwriting_mod
-            ).rsplit(".", 1)[0]
+            overwriting_mod_filename: str = self.__get_vortex_id(overwriting_mod)
 
-            if overwriting_mod_filename == file_name:
+            if overwriting_mod_filename == vortex_id:
                 raise ValueError(
                     f"Cyclic dependency detected in '{mod.display_name}': Mod conflicts with itself!"
                 )
@@ -683,7 +687,7 @@ class Vortex(ModManager[ProfileInfo]):
 
         # Add mod to profile
         profile_db_prefix: str = (
-            f"persistent###profiles###{instance_data.id}###modState###{file_name}###"
+            f"persistent###profiles###{instance_data.id}###modState###{vortex_id}###"
         )
         profile_mod_data: dict[str, Any] = (
             self.__level_db.get_section(profile_db_prefix)
@@ -691,7 +695,7 @@ class Vortex(ModManager[ProfileInfo]):
             .get("profiles", {})
             .get(instance_data.id, {})
             .get("modState", {})
-            .get(file_name, {})
+            .get(vortex_id, {})
         )
         profile_mod_data["enabled"] = mod.enabled
         profile_mod_data["enabledTime"] = Vortex.format_unix_timestamp(time.time())
@@ -844,13 +848,14 @@ class Vortex(ModManager[ProfileInfo]):
                 continue
 
             self.log.debug(f"Setting file overrides for '{mod.display_name}'...")
-            full_mod_name: str = self.__get_unique_file_name(mod).rsplit(".", 1)[0]
+            full_mod_name: str = self.__get_vortex_id(mod)
             prefix: str = f"persistent###mods###{game.id.lower()}###{full_mod_name}###"
-            mod_data: dict[str, Any] = self.__level_db.get_section(prefix)["persistent"][
-                "mods"
-            ][game.id.lower()][full_mod_name]
+            mod_data: dict[str, Any] = self.__level_db.get_section(prefix)[
+                "persistent"
+            ]["mods"][game.id.lower()][full_mod_name]
             mod_data["fileOverrides"] = [
-                str(game_folder / game.mods_folder / file) for file in mod.file_conflicts
+                str(game_folder / game.mods_folder / file)
+                for file in mod.file_conflicts
             ]
             self.__level_db.set_section(prefix, mod_data)
 
@@ -895,13 +900,29 @@ class Vortex(ModManager[ProfileInfo]):
     def get_mods_path(self, instance_data: ProfileInfo) -> Path:
         return self.__get_staging_folder(instance_data.game)
 
-    def __get_unique_file_name(self, mod: Mod) -> str:
+    def __get_installation_file_name(self, mod: Mod) -> str:
         return mod.metadata.file_name or Vortex.create_unique_file_name(
             mod_name=mod.display_name,
             mod_id=mod.metadata.mod_id,
             file_id=mod.metadata.file_id,
             version=mod.metadata.version,
         )
+
+    def __get_vortex_id(self, mod: Mod) -> str:
+        vortex_id: str = self.__get_installation_file_name(mod).rsplit(".", 1)[0]
+        if mod.variant:
+            vortex_id += f"-{mod.variant}"
+
+        return clean_fs_string(vortex_id)
+
+    @staticmethod
+    def __get_variant(vortex_id: str, installation_file_name: str) -> Optional[str]:
+        archive_id: str = installation_file_name.rsplit(".", 1)[0]
+        if not vortex_id.casefold().startswith(archive_id.casefold()):
+            return None
+
+        variant: str = vortex_id[len(archive_id) :].strip("-_. ")
+        return variant or None
 
     @staticmethod
     def get_logical_file_name(full_file_name: str, mod_id: int) -> str:
