@@ -4,7 +4,7 @@ Copyright (c) Cutleast
 
 import logging
 from abc import abstractmethod
-from typing import override
+from typing import Generic, TypeVar, override
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget
@@ -13,8 +13,10 @@ from mod_manager_lib.core.game import Game
 from mod_manager_lib.core.mod_manager.apis import ModManagerApi
 from mod_manager_lib.core.mod_manager.instance_info import InstanceInfo
 
+InstanceInfoType = TypeVar("InstanceInfoType", bound=InstanceInfo)
 
-class BaseCreatorWidget[I: InstanceInfo](QWidget):
+
+class BaseCreatorWidget(QWidget, Generic[InstanceInfoType]):
     """
     Base class for customizing an instance for a preselected mod manager.
     """
@@ -58,7 +60,7 @@ class BaseCreatorWidget[I: InstanceInfo](QWidget):
         """
 
     @abstractmethod
-    def get_instance(self, game: Game) -> I:
+    def get_instance(self, game: Game) -> InstanceInfoType:
         """
         Gets the data for the customized instance.
 

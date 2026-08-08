@@ -4,13 +4,15 @@ Copyright (c) Cutleast
 Original code licensed under MIT License by ysenarath from here:
     https://github.com/ysenarath/plyvel-stubs
 
-Adapted for plyvel-ci for Windows usage and Python>=3.12.
+Adapted for plyvel-next for Windows usage and Python>=3.14.
 """
 
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Iterator, Optional, overload
+from typing import Iterator, Optional, TypeVar, overload
+
+T = TypeVar("T")
 
 class Error(Exception): ...
 class IOError(Error): ...
@@ -47,7 +49,7 @@ class DB:
     @overload
     def get(self, key: bytes) -> Optional[bytes]: ...
     @overload
-    def get[T](self, key: bytes, default: T) -> bytes | T: ...
+    def get(self, key: bytes, default: T) -> bytes | T: ...
     def put(self, key: bytes, value: bytes, sync: bool = False) -> None: ...
     def delete(self, key: bytes, sync: bool = False) -> None: ...
     def iterator(
