@@ -194,6 +194,52 @@ class TestLevelDB(BaseTest):
         # then
         assert list(full_vortex_db.iterator(prefix=prefix.encode())) == []
 
+    def test_set_key_restores_key_after_section_deletion(
+        self, full_vortex_db: MockPlyvelDB
+    ) -> None:
+        """Tests set_key restores a key within a section pending deletion."""
+
+        # given
+        leveldb = LevelDB(Path(), use_symlink=False)
+        prefix = "persistent###mods###skyrimse###restored-mod###"
+        key = f"{prefix}id"
+
+        # when
+        leveldb.delete_section(prefix)
+        leveldb.set_key(key, "restored-mod")
+
+        # then
+        assert leveldb.get_key(key) == "restored-mod"
+
+        # when
+        leveldb.save()
+
+        # then
+        assert full_vortex_db.get(key.encode()) == b'"restored-mod"'
+
+    def test_set_section_restores_key_after_section_deletion(
+        self, full_vortex_db: MockPlyvelDB
+    ) -> None:
+        """Tests set_section restores keys within a section pending deletion."""
+
+        # given
+        leveldb = LevelDB(Path(), use_symlink=False)
+        prefix = "persistent###mods###skyrimse###restored-mod###"
+        key = f"{prefix}id"
+
+        # when
+        leveldb.delete_section(prefix)
+        leveldb.set_section(prefix, {"id": "restored-mod"})
+
+        # then
+        assert leveldb.get_key(key) == "restored-mod"
+
+        # when
+        leveldb.save()
+
+        # then
+        assert full_vortex_db.get(key.encode()) == b'"restored-mod"'
+
     def test_get_section_parsing(self, full_vortex_db: MockPlyvelDB) -> None:
         """
         Tests that get_section() correctly parses nested data.
