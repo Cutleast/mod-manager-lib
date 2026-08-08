@@ -12,6 +12,7 @@ from cutleast_core_lib.test.utils import Utils
 from mod_manager_lib.core.game import Game
 from mod_manager_lib.core.game_service import GameService
 from mod_manager_lib.core.instance.instance import Instance
+from mod_manager_lib.core.instance.metadata import Metadata
 from mod_manager_lib.core.instance.mod import Mod
 from mod_manager_lib.core.instance.tool import Tool
 from mod_manager_lib.core.mod_manager.vortex.api import Vortex
@@ -108,6 +109,91 @@ class TestVortex(BaseTest):
         assert dip.commandline_args == []
         assert not dip.is_in_game_dir
         assert dip.working_dir is None
+
+    def test_load_conflicts_resolves_file_expression(
+        self,
+        full_vortex_db: MockPlyvelDB,
+        test_fs: FakeFilesystem,
+        vortex_profile_info: ProfileInfo,
+    ) -> None:
+        """Tests conflict rules containing only a file expression are resolved."""
+
+        # given
+        source_id = "Wet and Cold SE v2.4.0-644-2-4-0-1601332084"
+        target_file_name = "Wet and Cold SE - Deutsch-89391-2-4-0-1716634410.zip"
+        rules_key = (f"persistent###mods###skyrimse###{source_id}###rules").encode()
+        raw_data: dict[bytes, bytes] = Utils.get_private_field(
+            full_vortex_db, *TestVortex.RAW_DATA
+        )
+        raw_data[rules_key] = json.dumps(
+            [
+                {
+                    "reference": {"fileExpression": target_file_name},
+                    "type": "before",
+                }
+            ]
+        ).encode()
+        vortex = Vortex()
+        vortex.db_path.mkdir(parents=True, exist_ok=True)
+
+        # when
+        instance: Instance = vortex.load_instance(vortex_profile_info)
+
+        # then
+        source_mod: Mod = self.get_mod_by_name("Wet and Cold SE", instance)
+        target_mod: Mod = self.get_mod_by_name("Wet and Cold SE - German", instance)
+        assert source_mod.mod_conflicts == [target_mod]
+
+    def test_load_conflicts_skips_ambiguous_file_expression(
+        self,
+        full_vortex_db: MockPlyvelDB,
+        test_fs: FakeFilesystem,
+        vortex_profile_info: ProfileInfo,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Tests file expressions matching multiple variants are ignored."""
+
+        # given
+        source_id = "Wet and Cold SE v2.4.0-644-2-4-0-1601332084"
+        target_id = "Wet and Cold SE - Deutsch-89391-2-4-0-1716634410"
+        variant_id = f"{target_id}-alternate"
+        target_file_name = "Wet and Cold SE - Deutsch-89391-2-4-0-1716634410.zip"
+        rules_key = (f"persistent###mods###skyrimse###{source_id}###rules").encode()
+        target_prefix = f"persistent###mods###skyrimse###{target_id}###".encode()
+        variant_prefix = f"persistent###mods###skyrimse###{variant_id}###".encode()
+        raw_data: dict[bytes, bytes] = Utils.get_private_field(
+            full_vortex_db, *TestVortex.RAW_DATA
+        )
+        raw_data[rules_key] = json.dumps(
+            [
+                {
+                    "reference": {"fileExpression": target_file_name},
+                    "type": "before",
+                }
+            ]
+        ).encode()
+        for key, value in list(raw_data.items()):
+            if key.startswith(target_prefix):
+                raw_data[variant_prefix + key.removeprefix(target_prefix)] = value
+        raw_data[variant_prefix + b"id"] = json.dumps(variant_id).encode()
+        raw_data[variant_prefix + b"installationPath"] = json.dumps(variant_id).encode()
+        profile_prefix = (
+            f"persistent###profiles###{vortex_profile_info.id}###modState###"
+            f"{variant_id}###"
+        ).encode()
+        raw_data[profile_prefix + b"enabled"] = b"true"
+        test_fs.create_dir(Path("E:/Modding/Vortex/skyrimse") / variant_id)
+        vortex = Vortex()
+        vortex.db_path.mkdir(parents=True, exist_ok=True)
+
+        # when
+        instance: Instance = vortex.load_instance(vortex_profile_info)
+
+        # then
+        source_mod: Mod = self.get_mod_by_name("Wet and Cold SE", instance)
+        assert source_mod.mod_conflicts == []
+        assert "Ambiguous fileExpression" in caplog.text
+        assert target_file_name in caplog.text
 
     def test_create_instance(
         self, test_fs: FakeFilesystem, ready_vortex_db: MockPlyvelDB
@@ -259,6 +345,209 @@ class TestVortex(BaseTest):
         # then
         dst_profile = vortex.load_instance(profile_info)
         assert dst_profile.mods[-1].metadata == mod.metadata
+
+    def test_install_mod_migrates_legacy_non_variant_id(
+        self, test_fs: FakeFilesystem, ready_vortex_db: MockPlyvelDB
+    ) -> None:
+        """Tests an existing raw archive ID is migrated instead of duplicated."""
+
+        # given
+        vortex = Vortex()
+        vortex.db_path.mkdir(parents=True, exist_ok=True)
+        profile_info = ProfileInfo(
+            display_name="Legacy ID test",
+            game=GameService.get_game_by_id("skyrimse"),
+            id="legacy-id-test",
+        )
+        instance: Instance = vortex.create_instance(
+            profile_info, Path("E:/SteamLibrary/Skyrim Special Edition")
+        )
+        archive_name = "Legacy: Mod.7z"
+        legacy_id = "Legacy: Mod"
+        vortex_id = "Legacy Mod"
+        staging_path = Path("E:/Modding/Vortex/skyrimse") / vortex_id
+        test_fs.create_file(staging_path / "existing.txt")
+        source_path = Path("C:/Source/Legacy Mod")
+        test_fs.create_file(source_path / "new.txt")
+        mod = Mod(
+            display_name="Legacy Mod",
+            path=source_path,
+            deploy_path=None,
+            metadata=Metadata(
+                mod_id=None,
+                file_id=None,
+                version="1.0",
+                file_name=archive_name,
+                game_id="skyrimspecialedition",
+            ),
+            installed=True,
+            enabled=True,
+        )
+        database: LevelDB = Utils.get_private_field(vortex, *TestVortex.DATABASE)
+        legacy_prefix = f"persistent###mods###skyrimse###{legacy_id}###"
+        database.set_section(
+            legacy_prefix,
+            {
+                "attributes": {
+                    "customFileName": "Existing legacy record",
+                    "fileName": archive_name,
+                },
+                "id": legacy_id,
+                "installationPath": vortex_id,
+                "state": "installed",
+                "type": None,
+            },
+        )
+        legacy_profile_mod_data: dict[str, Any] = {
+            "enabled": False,
+            "enabledTime": 1,
+        }
+        other_profile_id = "other-profile"
+        for profile_id in (profile_info.id, other_profile_id):
+            database.set_section(
+                f"persistent###profiles###{profile_id}###modState###{legacy_id}###",
+                legacy_profile_mod_data,
+            )
+        database.save()
+
+        # when
+        vortex.install_mod(
+            mod,
+            instance,
+            profile_info,
+            file_redirects={},
+            use_hardlinks=False,
+            replace=True,
+        )
+        vortex.finalize_instance(instance, profile_info, activate_instance=False)
+
+        # then
+        mods_data: dict[str, Any] = database.get_section(
+            "persistent###mods###skyrimse###"
+        )["persistent"]["mods"]["skyrimse"]
+        assert set(mods_data) == {vortex_id}
+        assert mods_data[vortex_id]["id"] == vortex_id
+        assert (
+            mods_data[vortex_id]["attributes"]["customFileName"]
+            == "Existing legacy record"
+        )
+        profiles_data: dict[str, Any] = database.get_section(
+            "persistent###profiles###"
+        )["persistent"]["profiles"]
+        target_mod_states: dict[str, Any] = profiles_data[profile_info.id]["modState"]
+        assert set(target_mod_states) == {vortex_id}
+        assert target_mod_states[vortex_id]["enabled"] is True
+        other_mod_states: dict[str, Any] = profiles_data[other_profile_id]["modState"]
+        assert set(other_mod_states) == {vortex_id}
+        assert other_mod_states[vortex_id] == legacy_profile_mod_data
+        assert (staging_path / "existing.txt").is_file()
+        assert not (staging_path / "new.txt").exists()
+
+    def test_install_and_load_mod_variants(
+        self, test_fs: FakeFilesystem, ready_vortex_db: MockPlyvelDB
+    ) -> None:
+        """
+        Tests variants installed from the same archive remain distinct in Vortex.
+        """
+
+        # given
+        vortex = Vortex()
+        vortex.db_path.mkdir(parents=True, exist_ok=True)
+        profile_info = ProfileInfo(
+            display_name="Variant test",
+            game=GameService.get_game_by_id("skyrimse"),
+            id="variant-test",
+        )
+        dst_profile: Instance = vortex.create_instance(
+            profile_info, Path("E:/SteamLibrary/Skyrim Special Edition")
+        )
+        archive_name = "Dear Diary: Dark Mode-60837-1-1-1-1667594519.7z"
+        archive_id = "Dear Diary Dark Mode-60837-1-1-1-1667594519"
+        metadata = Metadata(
+            mod_id=60837,
+            file_id=1,
+            version="1.1.1",
+            file_name=archive_name,
+            game_id="skyrimspecialedition",
+        )
+        base_path = Path("C:/Source/Dear Diary Dark Mode")
+        variant_path = Path("C:/Source/Dear Diary Dark Mode - 21x9")
+        test_fs.create_file(base_path / "interface" / "base.txt")
+        test_fs.create_file(variant_path / "interface" / "widescreen.txt")
+        base_mod = Mod(
+            display_name="Dear Diary Dark Mode",
+            path=base_path,
+            deploy_path=None,
+            metadata=metadata,
+            installed=True,
+            enabled=True,
+        )
+        variant_mod = Mod(
+            display_name="Dear Diary Dark Mode",
+            path=variant_path,
+            deploy_path=None,
+            metadata=metadata,
+            variant="21x9",
+            installed=True,
+            enabled=False,
+        )
+        base_mod.mod_conflicts = [variant_mod]
+
+        # when
+        for mod in [base_mod, variant_mod]:
+            vortex.install_mod(
+                mod,
+                dst_profile,
+                profile_info,
+                file_redirects={},
+                use_hardlinks=False,
+                replace=True,
+            )
+        vortex.finalize_instance(dst_profile, profile_info, activate_instance=False)
+        loaded_profile: Instance = vortex.load_instance(
+            ProfileInfo(
+                display_name="Variant test (variant-test)",
+                game=profile_info.game,
+                id=profile_info.id,
+            )
+        )
+
+        # then
+        database: LevelDB = Utils.get_private_field(vortex, *TestVortex.DATABASE)
+        mods_data: dict[str, Any] = database.get_section(
+            "persistent###mods###skyrimse###"
+        )["persistent"]["mods"]["skyrimse"]
+        variant_id: str = f"{archive_id}-21x9"
+        assert set(mods_data) == {archive_id, variant_id}
+        assert mods_data[archive_id]["attributes"]["fileName"] == archive_name
+        assert mods_data[variant_id]["attributes"]["fileName"] == archive_name
+        assert (Path("E:/Modding/Vortex/skyrimse") / archive_id).is_dir()
+        assert (Path("E:/Modding/Vortex/skyrimse") / variant_id).is_dir()
+
+        loaded_base: Mod = self.get_mod_by_name("Dear Diary Dark Mode", loaded_profile)
+        loaded_variant: Mod = self.get_mod_by_name(
+            "Dear Diary Dark Mode - 21x9", loaded_profile
+        )
+        assert loaded_base.variant is None
+        assert loaded_variant.variant == "21x9"
+        assert not loaded_variant.enabled
+        assert loaded_base.mod_conflicts == [loaded_variant]
+
+        # when
+        limited_profile: Instance = vortex.load_instance(
+            ProfileInfo(
+                display_name="Variant test (variant-test)",
+                game=profile_info.game,
+                id=profile_info.id,
+            ),
+            modname_limit=20,
+        )
+
+        # then
+        limited_variant: Mod = next(
+            mod for mod in limited_profile.mods if mod.variant == "21x9"
+        )
+        assert limited_variant.display_name == "Dear Diary Dark Mode - 21x9"
 
     def test_format_utc_timestamp(self) -> None:
         """

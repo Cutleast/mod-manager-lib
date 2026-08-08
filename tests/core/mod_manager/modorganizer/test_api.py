@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 from base_test import BaseTest
-from cutleast_core_lib.core.utilities.ini_file import IniData, IniFile
+from cutleast_core_lib.core.utilities.ini_file import IniData, IniFile, IniValue
 from cutleast_core_lib.test.utils import Utils
 from mod_manager_lib.core.game import Game
 from mod_manager_lib.core.game_service import GameService
@@ -138,11 +138,84 @@ class TestModOrganizer(BaseTest):
         assert overwrite_mod.mod_type == Mod.Type.Overwrite
         assert overwrite_mod.files == [Path("test.txt")]
 
+    def test_modorganizer_ini_is_case_insensitive(
+        self, test_fs: FakeFilesystem, mo2_instance_info: MO2InstanceInfo
+    ) -> None:
+        """
+        Tests that `ModOrganizer.ini` sections and keys are case-insensitive.
+        """
+
+        # given
+        mo2 = ModOrganizer()
+        portable_ini_path: Path = mo2_instance_info.base_folder / "ModOrganizer.ini"
+        global_ini_path: Path = mo2.appdata_path / "Test Instance" / "ModOrganizer.ini"
+        for ini_path in [portable_ini_path, global_ini_path]:
+            ini_data: IniData = IniFile.load(ini_path)
+            lowercase_ini_data: IniData = {
+                section.casefold(): {
+                    key.casefold(): value for key, value in values.items()
+                }
+                for section, values in ini_data.items()
+            }
+            IniFile.save(ini_path, lowercase_ini_data)
+
+        # when
+        instance: Instance = mo2.load_instance(mo2_instance_info)
+        new_tool = Tool(
+            display_name="Case-insensitive tool",
+            mod=None,
+            executable=Path("C:/Tools/test.exe"),
+            commandline_args=[],
+            working_dir=None,
+            is_in_game_dir=False,
+        )
+        mo2.add_tool(
+            new_tool,
+            instance,
+            mo2_instance_info,
+            use_hardlinks=False,
+            replace=False,
+        )
+
+        # then
+        assert instance.game_folder == Path("E:/SteamLibrary/Skyrim Special Edition")
+        assert len(instance.tools) == 4
+        assert mo2.get_instance_names(mo2_instance_info.game) == ["Test Instance"]
+        assert mo2.get_mods_folder(portable_ini_path) == mo2_instance_info.mods_folder
+        assert (
+            mo2.get_profiles_folder(portable_ini_path)
+            == mo2_instance_info.profiles_folder
+        )
+        assert mo2.get_overwrite_folder(portable_ini_path) == (
+            mo2_instance_info.base_folder / "overwrite"
+        )
+        assert mo2.get_profile_names(portable_ini_path) == ["Default", "TestProfile"]
+        assert mo2.get_last_active_profile(portable_ini_path) == "Default"
+
+        updated_ini_data: IniData = IniFile.load(portable_ini_path)
+        custom_executable_sections: list[str] = [
+            section
+            for section in updated_ini_data
+            if section.casefold() == "customexecutables"
+        ]
+        assert custom_executable_sections == ["customexecutables"]
+        custom_executables: dict[str, IniValue] = updated_ini_data[
+            custom_executable_sections[0]
+        ]
+        assert custom_executables["size"] == 6
+        assert custom_executables["6\\title"] == new_tool.display_name
+
     @staticmethod
     def process_conflicts_stub(mods: list[Mod], file_blacklist: list[str]) -> None:
         """
         Method stub for `ModOrganizer.__process_conflicts()`.
         """
+
+        raise NotImplementedError
+
+    @staticmethod
+    def get_root_builder_path_stub(file: Path, mods_folder: Path) -> Path:
+        """Stub for `ModOrganizer.__get_root_builder_path`."""
 
         raise NotImplementedError
 
@@ -167,7 +240,9 @@ class TestModOrganizer(BaseTest):
             "test_file_3": [mods[4]],
         }
 
-        for i in range(100_000, 500_000):  # simulate a large mod list with lots of files
+        for i in range(
+            100_000, 500_000
+        ):  # simulate a large mod list with lots of files
             file_index[f"test_file_{i}"] = [mods[i // 100_000]]
 
             # add some hidden files
@@ -214,7 +289,9 @@ class TestModOrganizer(BaseTest):
 
         # then
         assert mod1_file_redirects == {}
-        assert mod2_file_redirects == {Path("test_file_2.mohidden"): Path("test_file_2")}
+        assert mod2_file_redirects == {
+            Path("test_file_2.mohidden"): Path("test_file_2")
+        }
 
     def test_create_instance(self, test_fs: FakeFilesystem) -> None:
         """
@@ -316,6 +393,184 @@ class TestModOrganizer(BaseTest):
         ) < dst_instance.loadorder.index(migrated_overwriting_mod)
         assert migrated_overwritten_mod.files == overwritten_mod.files
         assert migrated_overwriting_mod.files == overwriting_mod.files
+
+    def test_install_root_builder_mod_splits_game_and_root_files(
+        self, test_fs: FakeFilesystem
+    ) -> None:
+        """
+        Tests Root Builder places Data files at the mod root and game files in Root.
+        """
+
+        # given
+        mo2 = ModOrganizer()
+        game = GameService.get_game_by_id("skyrimse")
+        instance_path = Path("E:/Modding/Root Builder Test")
+        instance_data = MO2InstanceInfo(
+            display_name="Root Builder Test",
+            game=game,
+            profile="Default",
+            is_global=False,
+            base_folder=instance_path,
+            mods_folder=instance_path / "mods",
+            profiles_folder=instance_path / "profiles",
+            install_mo2=False,
+            use_root_builder=True,
+        )
+        instance: Instance = mo2.create_instance(
+            instance_data, Path("E:/SteamLibrary/Skyrim Special Edition")
+        )
+        source_path = Path("C:/Source/Root Builder Mod")
+        test_fs.create_file(source_path / "meta.ini", contents="[General]\n")
+        test_fs.create_file(source_path / "skse64_loader.exe")
+        test_fs.create_file(source_path / "Data" / "Scripts" / "a.pex")
+        test_fs.create_file(source_path / "redirected" / "interface.swf")
+        test_fs.create_file(source_path / "Data" / "Scripts" / "hidden.pex.mohidden")
+        mod = Mod(
+            display_name="Root Builder Mod",
+            path=source_path,
+            deploy_path=Path("."),
+            metadata=Metadata.create_blank(),
+            installed=True,
+            enabled=True,
+        )
+        mod.file_conflicts[str(Path("Data/Scripts/hidden.pex")).lower()] = mod
+        file_redirects: dict[Path, Path] = mo2.get_actual_files(mod)
+        file_redirects[Path("redirected/interface.swf")] = Path(
+            "Data/interface/interface.swf"
+        )
+
+        # when
+        mo2.install_mod(
+            mod,
+            instance,
+            instance_data,
+            file_redirects=file_redirects,
+            use_hardlinks=False,
+            replace=True,
+        )
+
+        # then
+        mod_folder: Path = instance_data.mods_folder / mod.display_name
+        assert (mod_folder / "meta.ini").is_file()
+        assert not (mod_folder / "Root" / "meta.ini").exists()
+        assert (mod_folder / "Root" / "skse64_loader.exe").is_file()
+        assert (mod_folder / "Scripts" / "a.pex").is_file()
+        assert (mod_folder / "interface" / "interface.swf").is_file()
+        assert (mod_folder / "Scripts" / "hidden.pex.mohidden").is_file()
+        assert not (mod_folder / "Data").exists()
+        assert not (mod_folder / "Root" / "Data").exists()
+
+    def test_root_builder_keeps_file_named_like_mods_folder_at_mod_root(
+        self,
+    ) -> None:
+        """Tests a file named `Data` remains a file at the MO2 mod root."""
+
+        # given
+        get_root_builder_path = Utils.get_private_method(
+            ModOrganizer,
+            "get_root_builder_path",
+            self.get_root_builder_path_stub,
+        )
+
+        # when
+        root_builder_path: Path = get_root_builder_path(Path("Data"), Path("data"))
+
+        # then
+        assert root_builder_path == Path("Data")
+
+    @pytest.mark.parametrize(
+        ("version", "expected_version"),
+        [
+            ("", None),
+            ("1", "1.0.0.0"),
+            ("1.0", "1.0.0.0"),
+            ("1.2.3", "1.2.3.0"),
+            ("1.2.3.4", "1.2.3.4"),
+            ("1.2.3.4.5", "1.2.3.4.5"),
+            ("f1.07", "f1.07.0.0"),
+        ],
+    )
+    def test_write_meta_ini_file_pads_version(
+        self, tmp_path: Path, version: str, expected_version: IniValue
+    ) -> None:
+        """
+        Tests that generated MO2 metadata contains at least four version segments.
+        """
+
+        # given
+        meta_ini_path: Path = tmp_path / "meta.ini"
+        metadata = Metadata(
+            mod_id=1,
+            file_id=2,
+            version=version,
+            file_name="test.7z",
+            game_id="skyrimspecialedition",
+        )
+
+        # when
+        ModOrganizer.write_meta_ini_file(
+            meta_ini_path, metadata, GameService.get_game_by_id("skyrimse")
+        )
+
+        # then
+        meta_ini_data: IniData = IniFile.load(meta_ini_path)
+        assert meta_ini_data["General"]["version"] == expected_version
+
+    def test_load_mods_assigns_variants_for_shared_archive(
+        self, test_fs: FakeFilesystem, mo2_instance_info: MO2InstanceInfo
+    ) -> None:
+        """
+        Tests that MO2 mods from the same archive receive distinct variants.
+        """
+
+        # given
+        mo2 = ModOrganizer()
+        archive_name = "Dear Diary Dark Mode-60837-1-1-1-1667594519.7z"
+        mod_names: list[str] = [
+            "Dear Diary Dark Mode",
+            "Dear Diary Dark Mode - 21x9",
+        ]
+        metadata = Metadata(
+            mod_id=60837,
+            file_id=1,
+            version="1.1.1",
+            file_name=archive_name,
+            game_id="skyrimspecialedition",
+        )
+        for mod_name in mod_names:
+            mod_folder: Path = mo2_instance_info.mods_folder / mod_name
+            mod_folder.mkdir()
+            ModOrganizer.write_meta_ini_file(
+                mod_folder / "meta.ini", metadata, mo2_instance_info.game
+            )
+            test_fs.create_file(mod_folder / "interface" / f"{mod_name}.txt")
+
+        modlist_path: Path = (
+            mo2_instance_info.profiles_folder
+            / mo2_instance_info.profile
+            / "modlist.txt"
+        )
+        modlist_path.write_text(
+            modlist_path.read_text()
+            + "\n"
+            + "\n".join(f"+{name}" for name in mod_names)
+        )
+
+        # when
+        mods: list[Mod] = mo2.load_mods(
+            mo2_instance_info,
+            Path("E:/SteamLibrary/Skyrim Special Edition"),
+            load_conflicts=False,
+        )
+
+        # then
+        base_mod: Mod = next(mod for mod in mods if mod.display_name == mod_names[0])
+        variant_mod: Mod = next(mod for mod in mods if mod.display_name == mod_names[1])
+        assert base_mod.metadata.file_name == archive_name
+        assert variant_mod.metadata.file_name == archive_name
+        assert base_mod.variant is None
+        assert variant_mod.variant == "21x9"
+        assert Mod.create_copy(variant_mod).variant == "21x9"
 
     def test_install_mod_with_separator(
         self, test_fs: FakeFilesystem, instance: Instance

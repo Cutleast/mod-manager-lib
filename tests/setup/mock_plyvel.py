@@ -37,6 +37,9 @@ class MockPlyvelDB:
     def put(self, key: bytes, value: bytes) -> None:  # noqa: D102
         self.__data[key] = value
 
+    def delete(self, key: bytes) -> None:  # noqa: D102
+        self.__data.pop(key, None)
+
     def get(self, key: bytes) -> Optional[bytes]:  # noqa: D102
         if key in self.__data:
             return self.__data[key]

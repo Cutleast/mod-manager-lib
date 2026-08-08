@@ -30,6 +30,7 @@ class LevelDB:
     __symlink_path: Optional[Path]
 
     __data: dict[str, str]
+    __deleted_prefixes: set[str]
     __changes_pending: bool
 
     log: logging.Logger = logging.getLogger("LevelDB")
@@ -46,6 +47,7 @@ class LevelDB:
 
         self.__symlink_path = None
         self.__data = {}
+        self.__deleted_prefixes = set()
         self.__changes_pending = False
 
     def get_symlink_path(self) -> Path:
@@ -138,7 +140,12 @@ class LevelDB:
 
         with ldb.DB(str(db_path)) as database:
             for key, value in database.iterator(prefix=prefix):
-                raw_data[key.decode()] = value.decode()
+                decoded_key: str = key.decode()
+                if not any(
+                    decoded_key.startswith(deleted_prefix)
+                    for deleted_prefix in self.__deleted_prefixes
+                ):
+                    raw_data[decoded_key] = value.decode()
 
         self.__data.update(raw_data)
         self.log.info("Database loaded.")
@@ -158,9 +165,17 @@ class LevelDB:
         self.log.info(f"Saving database to '{db_path}'...")
 
         with ldb.DB(str(db_path)) as database, database.write_batch() as batch:
+            deleted_keys: set[bytes] = {
+                key
+                for prefix in self.__deleted_prefixes
+                for key, _ in database.iterator(prefix=prefix.encode())
+            }
+            for key in deleted_keys:
+                batch.delete(key)
             for key, value in self.__data.items():
                 batch.put(key.encode(), value.encode())
 
+        self.__deleted_prefixes.clear()
         self.__changes_pending = False
         self.log.info("Database saved.")
 
@@ -184,7 +199,10 @@ class LevelDB:
         with ldb.DB(str(db_path)) as database:
             for raw_key, raw_value in database.iterator(prefix=prefix_bytes):
                 key: str = raw_key.decode()
-                if key not in self.__data:
+                if key not in self.__data and not any(
+                    key.startswith(deleted_prefix)
+                    for deleted_prefix in self.__deleted_prefixes
+                ):
                     self.__data[key] = raw_value.decode()
                     self.__changes_pending = True
 
@@ -209,6 +227,19 @@ class LevelDB:
         self.__data.update(raw_data)
         self.__changes_pending = True
 
+    def delete_section(self, prefix: str) -> None:
+        """
+        Deletes all key-value pairs starting with the given prefix on save.
+
+        Args:
+            prefix (str): The prefix of the section to delete.
+        """
+
+        for key in [key for key in self.__data if key.startswith(prefix)]:
+            self.__data.pop(key, None)
+        self.__deleted_prefixes.add(prefix)
+        self.__changes_pending = True
+
     def get_key(self, key: str) -> Optional[Any]:
         """
         Returns the deserialized value of a specified key. If the key is not in the
@@ -220,6 +251,12 @@ class LevelDB:
         Returns:
             Optional[Any]: The value of the key or None if the key does not exist.
         """
+
+        if key in self.__data:
+            return json.loads(self.__data.get(key))
+
+        if any(key.startswith(prefix) for prefix in self.__deleted_prefixes):
+            return None
 
         if key not in self.__data:
             self.load(prefix=key)
