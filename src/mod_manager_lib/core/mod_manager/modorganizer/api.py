@@ -987,7 +987,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         file_prefix: tuple[str, ...] = file.parts[: len(mods_folder_parts)]
         if tuple(part.casefold() for part in file_prefix) == tuple(
             part.casefold() for part in mods_folder_parts
-        ):
+        ) and len(file.parts) > len(mods_folder_parts):
             return Path(*file.parts[len(mods_folder_parts) :])
 
         return Path("Root") / file
@@ -1154,6 +1154,32 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         self.log.debug(f"Dumped settings to '{settings_ini_path}'.")
 
     @staticmethod
+    def __get_settings_folder(
+        mo2_ini_path: Path, directory_key: str, default_name: str
+    ) -> Path:
+        """Resolves a configured MO2 directory relative to its base directory."""
+
+        ini_data: IniData = IniFile.load(mo2_ini_path)
+        settings: Optional[dict[str, IniValue]] = _get_case_insensitive(
+            ini_data, "Settings"
+        )
+        if settings is None:
+            raise KeyError("Settings")
+
+        raw_base_dir: IniValue = _get_case_insensitive(settings, "base_directory")
+        base_dir: Path = (
+            Path(checked_cast(str, raw_base_dir))
+            if raw_base_dir is not None
+            else mo2_ini_path.parent
+        )
+
+        raw_dir: IniValue = _get_case_insensitive(settings, directory_key)
+        if raw_dir is None:
+            return base_dir / default_name
+
+        return resolve(Path(checked_cast(str, raw_dir)), base_dir=str(base_dir))
+
+    @staticmethod
     def get_mods_folder(mo2_ini_path: Path) -> Path:
         """
         Gets the path to the mods folder of the specified MO2 instance.
@@ -1165,29 +1191,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             Path: Path to the mods folder.
         """
 
-        ini_data: IniData = IniFile.load(mo2_ini_path)
-        settings: Optional[dict[str, IniValue]] = _get_case_insensitive(
-            ini_data, "Settings"
-        )
-        if settings is None:
-            raise KeyError("Settings")
-        raw_base_dir: IniValue = _get_case_insensitive(settings, "base_directory")
-        base_dir: Path = (
-            Path(checked_cast(str, raw_base_dir))
-            if raw_base_dir is not None
-            else mo2_ini_path.parent
-        )
-
-        mods_dir: Path
-        raw_mods_dir: IniValue = _get_case_insensitive(settings, "mod_directory")
-        if raw_mods_dir is not None:
-            mods_dir = resolve(
-                Path(checked_cast(str, raw_mods_dir)), base_dir=str(base_dir)
-            )
-        else:
-            mods_dir = base_dir / "mods"
-
-        return mods_dir
+        return ModOrganizer.__get_settings_folder(mo2_ini_path, "mod_directory", "mods")
 
     @staticmethod
     def get_profiles_folder(mo2_ini_path: Path) -> Path:
@@ -1201,32 +1205,9 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             Path: Path to the profiles folder.
         """
 
-        ini_data: IniData = IniFile.load(mo2_ini_path)
-        settings: Optional[dict[str, IniValue]] = _get_case_insensitive(
-            ini_data, "Settings"
+        return ModOrganizer.__get_settings_folder(
+            mo2_ini_path, "profiles_directory", "profiles"
         )
-        if settings is None:
-            raise KeyError("Settings")
-        raw_base_dir: IniValue = _get_case_insensitive(settings, "base_directory")
-        base_dir: Path = (
-            Path(checked_cast(str, raw_base_dir))
-            if raw_base_dir is not None
-            else mo2_ini_path.parent
-        )
-
-        prof_dir: Path
-        raw_profiles_dir: IniValue = _get_case_insensitive(
-            settings, "profiles_directory"
-        )
-        if raw_profiles_dir is not None:
-            prof_dir = resolve(
-                Path(checked_cast(str, raw_profiles_dir)),
-                base_dir=str(base_dir),
-            )
-        else:
-            prof_dir = base_dir / "profiles"
-
-        return prof_dir
 
     @staticmethod
     def get_overwrite_folder(mo2_ini_path: Path) -> Path:
@@ -1240,32 +1221,9 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             Path: Path to the overwrite folder.
         """
 
-        ini_data: IniData = IniFile.load(mo2_ini_path)
-        settings: Optional[dict[str, IniValue]] = _get_case_insensitive(
-            ini_data, "Settings"
+        return ModOrganizer.__get_settings_folder(
+            mo2_ini_path, "overwrite_directory", "overwrite"
         )
-        if settings is None:
-            raise KeyError("Settings")
-        raw_base_dir: IniValue = _get_case_insensitive(settings, "base_directory")
-        base_dir: Path = (
-            Path(checked_cast(str, raw_base_dir))
-            if raw_base_dir is not None
-            else mo2_ini_path.parent
-        )
-
-        overwrite_dir: Path
-        raw_overwrite_dir: IniValue = _get_case_insensitive(
-            settings, "overwrite_directory"
-        )
-        if raw_overwrite_dir is not None:
-            overwrite_dir = resolve(
-                Path(checked_cast(str, raw_overwrite_dir)),
-                base_dir=str(base_dir),
-            )
-        else:
-            overwrite_dir = base_dir / "overwrite"
-
-        return overwrite_dir
 
     @staticmethod
     def get_profile_names(mo2_ini_path: Path) -> list[str]:
@@ -1279,30 +1237,9 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             list[str]: List of profile names.
         """
 
-        ini_data: IniData = IniFile.load(mo2_ini_path)
-        settings: Optional[dict[str, IniValue]] = _get_case_insensitive(
-            ini_data, "Settings"
+        prof_dir: Path = ModOrganizer.__get_settings_folder(
+            mo2_ini_path, "profiles_directory", "profiles"
         )
-        if settings is None:
-            raise KeyError("Settings")
-        raw_base_dir: IniValue = _get_case_insensitive(settings, "base_directory")
-        base_dir: Path = (
-            Path(checked_cast(str, raw_base_dir))
-            if raw_base_dir is not None
-            else mo2_ini_path.parent
-        )
-
-        prof_dir: Path
-        raw_profiles_dir: IniValue = _get_case_insensitive(
-            settings, "profiles_directory"
-        )
-        if raw_profiles_dir is not None:
-            prof_dir = resolve(
-                Path(checked_cast(str, raw_profiles_dir)),
-                base_dir=str(base_dir),
-            )
-        else:
-            prof_dir = base_dir / "profiles"
 
         return sorted([prof.name for prof in prof_dir.iterdir() if prof.is_dir()])
 

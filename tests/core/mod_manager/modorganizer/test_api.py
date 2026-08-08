@@ -181,6 +181,14 @@ class TestModOrganizer(BaseTest):
         assert instance.game_folder == Path("E:/SteamLibrary/Skyrim Special Edition")
         assert len(instance.tools) == 4
         assert mo2.get_instance_names(mo2_instance_info.game) == ["Test Instance"]
+        assert mo2.get_mods_folder(portable_ini_path) == mo2_instance_info.mods_folder
+        assert (
+            mo2.get_profiles_folder(portable_ini_path)
+            == mo2_instance_info.profiles_folder
+        )
+        assert mo2.get_overwrite_folder(portable_ini_path) == (
+            mo2_instance_info.base_folder / "overwrite"
+        )
         assert mo2.get_profile_names(portable_ini_path) == ["Default", "TestProfile"]
         assert mo2.get_last_active_profile(portable_ini_path) == "Default"
 
@@ -202,6 +210,12 @@ class TestModOrganizer(BaseTest):
         """
         Method stub for `ModOrganizer.__process_conflicts()`.
         """
+
+        raise NotImplementedError
+
+    @staticmethod
+    def get_root_builder_path_stub(file: Path, mods_folder: Path) -> Path:
+        """Stub for `ModOrganizer.__get_root_builder_path`."""
 
         raise NotImplementedError
 
@@ -445,6 +459,24 @@ class TestModOrganizer(BaseTest):
         assert (mod_folder / "Scripts" / "hidden.pex.mohidden").is_file()
         assert not (mod_folder / "Data").exists()
         assert not (mod_folder / "Root" / "Data").exists()
+
+    def test_root_builder_treats_file_named_like_mods_folder_as_root_file(
+        self,
+    ) -> None:
+        """Tests a file named `Data` is not redirected to the mod directory itself."""
+
+        # given
+        get_root_builder_path = Utils.get_private_method(
+            ModOrganizer,
+            "get_root_builder_path",
+            self.get_root_builder_path_stub,
+        )
+
+        # when
+        root_builder_path: Path = get_root_builder_path(Path("Data"), Path("data"))
+
+        # then
+        assert root_builder_path == Path("Root/Data")
 
     @pytest.mark.parametrize(
         ("version", "expected_version"),
