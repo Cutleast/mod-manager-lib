@@ -40,7 +40,6 @@ from mod_manager_lib.core.utilities.filesystem import clean_fs_string
 from ..mod_manager import ModManager
 from .instance_info import MO2InstanceInfo
 
-
 MappingValueType = TypeVar("MappingValueType")
 
 
@@ -131,9 +130,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             general, "gamePath"
         )
         if isinstance(raw_game_folder, str):
-            raw_game_folder = ModOrganizer.BYTE_ARRAY_PATTERN.sub(
-                r"\1", raw_game_folder
-            )
+            raw_game_folder = ModOrganizer.BYTE_ARRAY_PATTERN.sub(r"\1", raw_game_folder)
             raw_game_folder = raw_game_folder.replace("\\\\", "\\")
             game_folder = Path(raw_game_folder)
         elif game_folder is None:
@@ -339,9 +336,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
             f"{instance_name} > {profile_name} in {duration:.2f}s."
         )
         if missing_metadata_count:
-            self.log.warning(
-                f"{missing_metadata_count} loaded mod(s) have no metadata."
-            )
+            self.log.warning(f"{missing_metadata_count} loaded mod(s) have no metadata.")
 
         return mods
 
@@ -352,9 +347,9 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         mods_by_archive: dict[str, list[Mod]] = {}
         for mod in mods:
             if mod.metadata.file_name:
-                mods_by_archive.setdefault(
-                    mod.metadata.file_name.casefold(), []
-                ).append(mod)
+                mods_by_archive.setdefault(mod.metadata.file_name.casefold(), []).append(
+                    mod
+                )
 
         for matching_mods in mods_by_archive.values():
             if len(matching_mods) < 2:
@@ -771,9 +766,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
 
         instance_data.mods_folder.mkdir(parents=True, exist_ok=True)
         instance_data.profiles_folder.mkdir(parents=True, exist_ok=True)
-        os.makedirs(
-            instance_data.profiles_folder / instance_data.profile, exist_ok=True
-        )
+        os.makedirs(instance_data.profiles_folder / instance_data.profile, exist_ok=True)
         os.makedirs(instance_data.base_folder / "downloads", exist_ok=True)
         os.makedirs(instance_data.base_folder / "overwrite", exist_ok=True)
         (instance_data.profiles_folder / instance_data.profile / "modlist.txt").touch()
@@ -985,9 +978,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         return Path("Root") / file
 
     @staticmethod
-    def write_meta_ini_file(
-        meta_ini_path: Path, metadata: Metadata, game: Game
-    ) -> None:
+    def write_meta_ini_file(meta_ini_path: Path, metadata: Metadata, game: Game) -> None:
         """
         Writes metadata to a meta.ini file.
 
@@ -1052,8 +1043,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
         custom_executables: dict[str, IniValue] = mo2_ini_data[section_key]
 
         size_key: str = (
-            ModOrganizer.__get_case_insensitive_key(custom_executables, "size")
-            or "size"
+            ModOrganizer.__get_case_insensitive_key(custom_executables, "size") or "size"
         )
         new_index = int(custom_executables.get(size_key) or 0) + 1
 
