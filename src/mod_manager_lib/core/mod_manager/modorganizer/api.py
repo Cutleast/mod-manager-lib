@@ -191,7 +191,7 @@ class ModOrganizer(ModManager[MO2InstanceInfo]):
                 pass
 
         instance = Instance(
-            display_name=f"{instance_name} > {profile_name}",
+            display_name=f"{instance_name}: {profile_name}",
             game_folder=game_folder,
             mods=mods,
             tools=tools,
